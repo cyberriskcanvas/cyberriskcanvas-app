@@ -1,0 +1,475 @@
+generator client {
+  provider      = "prisma-client"
+  output        = "../src/generated/prisma"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─── Teams ────────────────────────────────────────────────────────────────────
+
+model Team {
+  id        String   @id @default(cuid())
+  name      String
+  type      String   @default("product") // "product" | "review"
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  members       TeamMember[]
+  projects      Project[]
+  threatLibrary TeamThreatLibraryEntry[]
+
+  @@map("teams")
+}
+
+model TeamMember {
+  id        String   @id @default(cuid())
+  teamId    String
+  team      Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role      String   @default("member") // "lead" | "member"
+  createdAt DateTime @default(now())
+
+  @@unique([teamId, userId])
+  @@index([userId])
+  @@map("team_members")
+}
+
+// ─── Users ────────────────────────────────────────────────────────────────────
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String
+  passwordHash String   @default("")
+  role         String   @default("user") // "user" | "admin"
+  color        String   @default("#6366F1")
+  companyName  String?
+  companyLogo  String?  // base64 data-URL, max ~200 KB
+  // CSAF publisher profile
+  csafPublisherName      String?
+  csafPublisherNamespace String?
+  csafPublisherCategory  String  @default("vendor") // vendor | coordinator | discoverer | other
+  csafIssuingAuthority   String?
+  csafContactDetails     String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  projects      Project[]
+  versions      DiagramVersion[]
+  feedbackItems FeedbackItem[]
+  feedbackVotes FeedbackVote[]
+  memberships   TeamMember[]
+  apiKeys       ApiKey[]
+
+  @@map("users")
+}
+
+// ─── License ──────────────────────────────────────────────────────────────────
+
+model License {
+  id              String    @id @default(cuid())
+  key             String    @unique
+  valid           Boolean   @default(false)
+  maxUsers        Int       @default(0)
+  lastValidatedAt DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@map("licenses")
+}
+
+// ─── Projects & Diagrams ─────────────────────────────────────────────────────
+
+model Project {
+  id          String  @id @default(cuid())
+  name        String
+  description String?
+  notes              String?
+  notesUpdatedByName String?
+  notesUpdatedAt     DateTime?
+  thumbnail   String?
+  teamId      String?
+  team        Team?   @relation(fields: [teamId], references: [id], onDelete: SetNull)
+  ownerId     String?
+  owner       User?   @relation(fields: [ownerId], references: [id], onDelete: SetNull)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Diagram stays on project (canvas always reflects current active state)
+  diagrams         Diagram[]
+  documents        ProjectDocument[]
+  measureEvidence  MeasureEvidence[]
+
+  // Explicit versioning - replaces parentId / branches / lockedAt
+  versions ProjectVersion[]
+
+  // CSAF is global across all versions
+  csafDraft      CsafDraft?
+  csafAdvisories CsafAdvisory[]
+
+  // Threat library - project-scoped reusable threat catalogue
+  threatLibrary  ThreatLibraryEntry[]
+
+  @@index([teamId])
+  @@index([ownerId])
+  @@map("projects")
+}
+
+// ─── Threat Library ───────────────────────────────────────────────────────────
+
+model ThreatLibraryEntry {
+  id                String   @id @default(cuid())
+  projectId         String
+  project           Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  name              String
+  stride            String   // 'S' | 'T' | 'R' | 'I' | 'D' | 'E'
+  cweId             String?
+  description       String?
+  componentTypeHint String?  // optional tag for filtering, e.g. 'plc', 'gateway', 'ecu'
+  createdAt         DateTime @default(now())
+
+  @@index([projectId])
+  @@map("threat_library_entries")
+}
+
+// ─── Project Versions ─────────────────────────────────────────────────────────
+// Each project always has exactly one "active" version (the current work-in-progress).
+// Freezing sets the active version to "frozen" and creates a new active v(n+1).
+// TARA state at freeze time is captured in DiagramVersion snapshots.
+// SBOM + Vulnerabilities are scoped per version.
+
+model ProjectVersion {
+  id           String    @id @default(cuid())
+  projectId    String
+  project      Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  number       Int                                  // 1, 2, 3 …
+  label        String    @default("")               // user-facing name, e.g. "CRA Audit Q1 2025"
+  status       String    @default("active")         // "active" | "frozen"
+  frozenAt     DateTime?
+  frozenByName String?
+  createdAt    DateTime  @default(now())
+
+  sboms           ProjectSbom[]
+  vulnerabilities ProjectVulnerability[]
+
+  @@unique([projectId, number])
+  @@index([projectId])
+  @@map("project_versions")
+}
+
+model Diagram {
+  id        String   @id @default(cuid())
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  name      String
+  nodes     Json     @default("[]")
+  edges     Json     @default("[]")
+  viewport  Json     @default("{\"x\":0,\"y\":0,\"zoom\":1}")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  versions        DiagramVersion[]
+  sbomComponents  SbomComponent[]
+  measureEvidence MeasureEvidence[]
+
+  @@index([projectId])
+  @@map("diagrams")
+}
+
+model DiagramVersion {
+  id        String   @id @default(cuid())
+  diagramId String
+  diagram   Diagram  @relation(fields: [diagramId], references: [id], onDelete: Cascade)
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  nodes     Json
+  edges     Json
+  viewport  Json
+  message   String?
+  createdAt DateTime @default(now())
+
+  @@index([diagramId])
+  @@map("diagram_versions")
+}
+
+// ─── Project Documents ────────────────────────────────────────────────────────
+
+model ProjectDocument {
+  id          String   @id @default(cuid())
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  name        String
+  storagePath String
+  size        Int
+  createdAt   DateTime @default(now())
+
+  @@index([projectId])
+  @@map("project_documents")
+}
+
+// ─── API Keys ─────────────────────────────────────────────────────────────────
+
+model ApiKey {
+  id         String    @id @default(cuid())
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name       String
+  keyHash    String    @unique  // SHA-256 of the full key (hex)
+  prefix     String             // first 8 chars after "crc_" for display
+  lastUsedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([userId])
+  @@index([keyHash])
+  @@map("api_keys")
+}
+
+// ─── Version-Scoped Operations (SBOM / Vulnerabilities) ──────────────────────
+
+model ProjectSbom {
+  id             String         @id @default(cuid())
+  versionId      String
+  version        ProjectVersion @relation(fields: [versionId], references: [id], onDelete: Cascade)
+  // Denormalized for fast project-level access checks
+  projectId      String
+  fileName       String
+  format         String         // "CycloneDX" | "SPDX"
+  componentCount Int            @default(0)
+  uploadedAt     DateTime       @default(now())
+
+  vulnerabilities ProjectVulnerability[]
+  components      ProjectSbomComponent[]
+
+  @@index([versionId])
+  @@index([projectId])
+  @@map("project_sboms")
+}
+
+// Persisted component list per SBOM upload - needed so the periodic CVE
+// re-scan can re-query OSV for components that currently have zero known
+// vulnerabilities (the upload flow only ever persisted the resulting vulns).
+model ProjectSbomComponent {
+  id        String      @id @default(cuid())
+  sbomId    String
+  sbom      ProjectSbom @relation(fields: [sbomId], references: [id], onDelete: Cascade)
+  // Denormalized for the re-scan job (avoids joining through to active versions)
+  versionId String
+  projectId String
+  name      String
+  version   String?
+  purl      String?
+  createdAt DateTime    @default(now())
+
+  @@index([sbomId])
+  @@index([versionId])
+  @@map("project_sbom_components")
+}
+
+model ProjectVulnerability {
+  id               String         @id @default(cuid())
+  sbomId           String
+  sbom             ProjectSbom    @relation(fields: [sbomId], references: [id], onDelete: Cascade)
+  versionId        String
+  version          ProjectVersion @relation(fields: [versionId], references: [id], onDelete: Cascade)
+  // Denormalized for fast project-level access checks and CSAF aggregation
+  projectId        String
+  osvId            String
+  cveId            String?
+  summary          String?
+  severity         String?        // "CRITICAL" | "HIGH" | "MEDIUM" | "LOW"
+  cvssScore        Float?
+  componentName    String
+  componentVersion String?
+  componentPurl    String?
+  status           String         @default("open") // "open" | "in_triage" | "not_affected" | "fixed"
+  justification    String?
+  // Updated on every re-scan that still finds this vuln; lets the security
+  // team see which findings were not re-confirmed in the latest run.
+  lastSeenAt       DateTime       @default(now())
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  @@index([sbomId])
+  @@index([versionId])
+  @@index([projectId])
+  @@map("project_vulnerabilities")
+}
+
+// Audit trail + overlap lock for the periodic CVE re-scan (triggered by an
+// external cron hitting /api/internal/cve-scan).
+model CveScanRun {
+  id            String    @id @default(cuid())
+  startedAt     DateTime  @default(now())
+  finishedAt    DateTime?
+  status        String    @default("running") // "running" | "completed" | "failed"
+  scannedCount  Int       @default(0)         // unique components queried against OSV
+  newCount      Int       @default(0)         // newly created ProjectVulnerability rows
+  errorMessage  String?
+
+  @@index([startedAt])
+  @@map("cve_scan_runs")
+}
+
+// Outgoing webhook for new-finding alerts from the periodic CVE re-scan
+// (Slack incoming webhooks, MS Teams connectors, or a generic JSON POST).
+// Instance-wide, like the Pro license itself - not scoped to a team.
+model AlertChannel {
+  id          String   @id @default(cuid())
+  url         String
+  type        String   @default("generic") // "slack" | "teams" | "generic"
+  minSeverity String   @default("HIGH")    // "CRITICAL" | "HIGH" | "MEDIUM" | "LOW"
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("alert_channels")
+}
+
+// ─── CSAF (Global per Project) ────────────────────────────────────────────────
+
+model CsafAdvisory {
+  id        String   @id @default(cuid())
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  content   Json
+  createdAt DateTime @default(now())
+
+  @@index([projectId])
+  @@map("csaf_advisories")
+}
+
+model CsafDraft {
+  id        String   @id @default(cuid())
+  projectId String   @unique
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  title              String   @default("")
+  trackingId         String   @default("")
+  version            String   @default("1")
+  revision           String   @default("Initial release")
+  docStatus          String   @default("DRAFT") // DRAFT | REVIEW | PUBLISHED | ARCHIVED
+  aggregateSeverity  String   @default("MEDIUM")
+  initialReleaseDate DateTime @default(now())
+  currentReleaseDate DateTime @default(now())
+  tlp                String   @default("WHITE")
+  summary            String   @default("")
+  details            String   @default("")
+  publisherName      String   @default("")
+  publisherNamespace String   @default("")
+  publisherCategory  String   @default("vendor")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("csaf_drafts")
+}
+
+// ─── SBOM (Component-Level, legacy - node-scoped within canvas) ──────────────
+
+model SbomComponent {
+  id        String   @id @default(cuid())
+  diagramId String
+  diagram   Diagram  @relation(fields: [diagramId], references: [id], onDelete: Cascade)
+  nodeId    String
+  name      String
+  version   String?
+  purl      String?
+  type      String?
+  createdAt DateTime @default(now())
+
+  vulnerabilities SbomVulnerability[]
+
+  @@index([diagramId, nodeId])
+  @@map("sbom_components")
+}
+
+model SbomVulnerability {
+  id          String        @id @default(cuid())
+  componentId String
+  component   SbomComponent @relation(fields: [componentId], references: [id], onDelete: Cascade)
+  osvId       String
+  cveId       String?
+  summary     String?
+  severity    String?       // "CRITICAL" | "HIGH" | "MEDIUM" | "LOW"
+  cvssScore   Float?
+  source      String        @default("osv.dev")
+  createdAt   DateTime      @default(now())
+
+  @@index([componentId])
+  @@map("sbom_vulnerabilities")
+}
+
+// ─── Feedback ─────────────────────────────────────────────────────────────────
+
+model FeedbackItem {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String   // "feedback" | "feature" | "bug"
+  title     String
+  body      String
+  votes     Int      @default(0)
+  status    String   @default("open") // "open" | "planned" | "done" | "closed"
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  votesList FeedbackVote[]
+
+  @@index([type])
+  @@index([votes])
+  @@map("feedback_items")
+}
+
+model FeedbackVote {
+  id        String       @id @default(cuid())
+  itemId    String
+  item      FeedbackItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime     @default(now())
+
+  @@unique([itemId, userId])
+  @@index([userId])
+  @@map("feedback_votes")
+}
+
+// ─── Team Threat Library ──────────────────────────────────────────────────────
+
+model TeamThreatLibraryEntry {
+  id                String   @id @default(cuid())
+  teamId            String
+  team              Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  name              String
+  stride            String   // 'S' | 'T' | 'R' | 'I' | 'D' | 'E'
+  cweId             String?
+  description       String?
+  componentTypeHint String?
+  createdAt         DateTime @default(now())
+
+  @@index([teamId])
+  @@map("team_threat_library_entries")
+}
+
+// ─── Measure Evidence ─────────────────────────────────────────────────────────
+
+model MeasureEvidence {
+  id          String   @id @default(cuid())
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  diagramId   String
+  diagram     Diagram  @relation(fields: [diagramId], references: [id], onDelete: Cascade)
+  measureId   String   // client-side UUID from Measure.id in node JSON
+  name        String
+  storagePath String
+  mimeType    String   @default("application/pdf")
+  size        Int
+  createdAt   DateTime @default(now())
+
+  @@index([diagramId, measureId])
+  @@index([projectId])
+  @@map("measure_evidence")
+}

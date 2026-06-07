@@ -1,0 +1,90 @@
+
+services:
+  db:
+    image: postgres:17-alpine
+    container_name: cyberrisk-db-local
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: cyberrisk
+      POSTGRES_USER: cyberrisk
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-cyberrisk_dev}
+    ports:
+      # Exposed for local inspection (psql / Prisma Studio from the host).
+      - "5432:5432"
+    volumes:
+      - postgres_data_local:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U cyberrisk']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: cyberrisk-redis-local
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: cyberrisk-app-local
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      # Required for file-watching through Docker on macOS
+      - WATCHPACK_POLLING=true
+      - CHOKIDAR_USEPOLLING=true
+    ports:
+      - "3000:3000"
+    volumes:
+      - .:/app
+      # Keep container's node_modules and .next cache separate from host
+      - /app/node_modules
+      - /app/.next
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  # Optional periodic CVE re-scan. Disabled by default - enable with:
+  #   docker compose -f docker-compose.local.yml --profile cve-scan up -d
+  # (set CVE_SCAN_SECRET in .env; must match the value the `app` service uses).
+  #
+  # NOTE: once started this container restarts itself (unless-stopped) and
+  # keeps running on every later `up -d`, profile or not - leaving off
+  # `--profile cve-scan` does NOT stop it. To disable it again:
+  #   docker compose -f docker-compose.local.yml stop cve-scan
+  #   docker compose -f docker-compose.local.yml rm -f cve-scan
+  cve-scan:
+    image: curlimages/curl:8.20.0
+    container_name: cyberrisk-cve-scan-local
+    restart: unless-stopped
+    profiles: ['cve-scan']
+    environment:
+      CVE_SCAN_SECRET: ${CVE_SCAN_SECRET:?Set CVE_SCAN_SECRET to use the cve-scan profile}
+      CVE_SCAN_INTERVAL_SECONDS: ${CVE_SCAN_INTERVAL_SECONDS:-21600}
+    entrypoint: ['/bin/sh', '-c']
+    command:
+      - |
+        while true; do
+          echo "[cve-scan] $(date -u +%Y-%m-%dT%H:%M:%SZ) triggering scan…"
+          curl -fsS -o /dev/null -w '[cve-scan] HTTP %{http_code}\n' \
+            -X POST -H "Authorization: Bearer $$CVE_SCAN_SECRET" \
+            http://app:3000/api/internal/cve-scan \
+          || echo "[cve-scan] request failed"
+          sleep "$$CVE_SCAN_INTERVAL_SECONDS"
+        done
+    depends_on:
+      - app
+
+volumes:
+  postgres_data_local:

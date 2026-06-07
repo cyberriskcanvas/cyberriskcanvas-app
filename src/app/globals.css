@@ -1,0 +1,39 @@
+@import "tailwindcss";
+
+@theme {
+  --font-family-sans: "Inter", system-ui, sans-serif;
+  --font-family-mono: "JetBrains Mono", monospace;
+
+  --color-brand-50: #EEF2FF;
+  --color-brand-100: #E0E7FF;
+  --color-brand-200: #C7D2FE;
+  --color-brand-400: #818CF8;
+  --color-brand-500: #6366F1;
+  --color-brand-600: #4F46E5;
+  --color-brand-700: #4338CA;
+  --color-brand-800: #3730A3;
+  --color-brand-900: #312E81;
+}
+
+@layer base {
+  * { @apply border-gray-700; }
+  body { @apply bg-gray-950 text-gray-100 font-sans; }
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { @apply bg-gray-900; }
+  ::-webkit-scrollbar-thumb { @apply bg-gray-700 rounded; }
+}
+
+@layer components {
+  .react-flow__background { background-color: #f8fafc !important; }
+  .react-flow__edge-path { stroke: #94a3b8; stroke-width: 2; }
+  .react-flow__edge.selected .react-flow__edge-path,
+  .react-flow__edge:hover .react-flow__edge-path { stroke: #6366f1; stroke-width: 2.5; }
+  .react-flow__handle { width: 10px !important; height: 10px !important; background: #6366f1 !important; border: 2px solid white !important; }
+  .react-flow__controls { @apply shadow-xl border border-gray-200 rounded-lg overflow-hidden; }
+  .react-flow__minimap { @apply rounded-lg overflow-hidden border border-gray-200 shadow-xl; }
+}
+
+@layer utilities {
+  .node-shadow { box-shadow: 0 2px 8px rgba(0,0,0,0.12), 0 0 0 1px rgba(99,102,241,0.15); }
+  .node-shadow-selected { box-shadow: 0 4px 16px rgba(99,102,241,0.3), 0 0 0 2px #6366f1; }
+}

@@ -5,6 +5,7 @@ import { requireSession, requireAdmin } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { requireTierFeature } from '@/lib/tierGuard';
 import { getLicenseInfo } from '@/lib/license';
+import { audit } from '@/lib/audit';
 
 import { AVATAR_COLORS } from '@/lib/constants';
 
@@ -16,7 +17,7 @@ export async function createUser(
   password: string,
   role: 'user' | 'admin' = 'user',
 ): Promise<{ success: true } | { error: string }> {
-  await requireAdmin();
+  const session = await requireAdmin();
 
   if (!email?.trim() || !name?.trim()) return { error: 'Email and name are required' };
   if (password.length < 8) return { error: 'Password must be at least 8 characters' };
@@ -27,8 +28,17 @@ export async function createUser(
   const passwordHash = await bcrypt.hash(password, 12);
   const color = AVATAR_COLORS[Math.floor(Math.random() * AVATAR_COLORS.length)];
 
-  await prisma.user.create({
+  const created = await prisma.user.create({
     data: { email: email.toLowerCase(), name: name.trim(), passwordHash, role, color },
+  });
+
+  audit({
+    action: 'user.create',
+    actorId: session.user.id,
+    actorEmail: session.user.email,
+    targetType: 'user',
+    targetId: created.id,
+    details: { email: created.email, role },
   });
 
   return { success: true };
@@ -38,23 +48,49 @@ export async function updateUser(
   userId: string,
   data: { name?: string; role?: string; password?: string },
 ): Promise<void> {
-  await requireAdmin();
+  const session = await requireAdmin();
 
   const update: Record<string, unknown> = {};
   if (data.name) update.name = data.name.trim();
-  if (data.role) update.role = data.role;
+  if (data.role) {
+    if (!['user', 'admin'].includes(data.role)) throw new Error('Invalid role');
+    update.role = data.role;
+  }
   if (data.password) {
     if (data.password.length < 8) throw new Error('Password must be at least 8 characters');
     update.passwordHash = await bcrypt.hash(data.password, 12);
   }
 
-  await prisma.user.update({ where: { id: userId }, data: update });
+  const updated = await prisma.user.update({ where: { id: userId }, data: update });
+
+  audit({
+    action: 'user.update',
+    actorId: session.user.id,
+    actorEmail: session.user.email,
+    targetType: 'user',
+    targetId: userId,
+    details: {
+      email: updated.email,
+      ...(data.name ? { name: updated.name } : {}),
+      ...(data.role ? { role: updated.role } : {}),
+      ...(data.password ? { passwordChanged: true } : {}),
+    },
+  });
 }
 
 export async function deleteUser(userId: string): Promise<void> {
   const session = await requireAdmin();
   if (userId === session.user.id) throw new Error('Cannot delete your own account');
-  await prisma.user.delete({ where: { id: userId } });
+  const deleted = await prisma.user.delete({ where: { id: userId } });
+
+  audit({
+    action: 'user.delete',
+    actorId: session.user.id,
+    actorEmail: session.user.email,
+    targetType: 'user',
+    targetId: userId,
+    details: { email: deleted.email },
+  });
 }
 
 export async function listUsers() {
@@ -129,11 +165,27 @@ export async function changePassword(currentPassword: string, newPassword: strin
 
   const hash = await bcrypt.hash(newPassword, 12);
   await prisma.user.update({ where: { id: user.id }, data: { passwordHash: hash } });
+
+  audit({
+    action: 'user.password_change',
+    actorId: session.user.id,
+    actorEmail: session.user.email,
+    targetType: 'user',
+    targetId: user.id,
+  });
 }
 
 export async function deleteAccount() {
   const session = await requireSession();
   await prisma.user.delete({ where: { id: session.user.id } });
+
+  audit({
+    action: 'account.delete',
+    actorId: session.user.id,
+    actorEmail: session.user.email,
+    targetType: 'user',
+    targetId: session.user.id,
+  });
 }
 
 // ─── License ──────────────────────────────────────────────────────────────────

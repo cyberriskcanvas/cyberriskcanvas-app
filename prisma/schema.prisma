@@ -228,6 +228,27 @@ model ApiKey {
   @@map("api_keys")
 }
 
+// ─── Audit Log ────────────────────────────────────────────────────────────────
+
+// Security-relevant actions (user management, license changes, deletions, …).
+// Deliberately no FK to users: entries must survive deletion of the actor,
+// so actor identity is stored as a snapshot.
+model AuditLogEntry {
+  id         String   @id @default(cuid())
+  createdAt  DateTime @default(now())
+  actorId    String?  // null for system events (e.g. bootstrap)
+  actorEmail String?
+  action     String   // e.g. "user.create", "license.save", "document.delete"
+  targetType String?  // e.g. "user", "project", "document"
+  targetId   String?
+  details    Json?    // small, non-sensitive context (names, counts - never secrets)
+
+  @@index([createdAt])
+  @@index([action])
+  @@index([actorId])
+  @@map("audit_log")
+}
+
 // ─── Version-Scoped Operations (SBOM / Vulnerabilities) ──────────────────────
 
 model ProjectSbom {

@@ -4,6 +4,7 @@ import { prisma } from '@/lib/db';
 import { assertProjectWriteAccess } from '@/lib/access';
 import { TIER_CONFIG } from '@/lib/tierConfig';
 import { DOCUMENTS_DIR, MAX_PDF_SIZE, MAX_DOCS_PER_PROJECT, sanitizeFilename } from '@/lib/documentsStorage';
+import { audit } from '@/lib/audit';
 import fs from 'fs/promises';
 import path from 'path';
 import crypto from 'crypto';
@@ -70,6 +71,14 @@ export async function POST(req: NextRequest) {
   const doc = await prisma.projectDocument.create({
     data: { projectId, name: displayName, storagePath, size: bytes.length },
     select: { id: true, name: true, size: true, createdAt: true },
+  });
+
+  audit({
+    action: 'document.upload',
+    actorId: authResult.userId,
+    targetType: 'document',
+    targetId: doc.id,
+    details: { projectId, name: doc.name, size: doc.size },
   });
 
   return NextResponse.json(doc, { status: 201 });

@@ -2,22 +2,43 @@
 
 import { requireAdmin } from '@/lib/auth';
 import { prisma } from '@/lib/db';
+import { audit } from '@/lib/audit';
 import { revalidatePath } from 'next/cache';
 
 export async function createTeam(name: string, type: 'product' | 'review') {
-  await requireAdmin();
+  const session = await requireAdmin();
   if (!name.trim()) throw new Error('Team name is required');
 
   const team = await prisma.team.create({
     data: { name: name.trim(), type },
   });
+
+  audit({
+    action: 'team.create',
+    actorId: session.user.id,
+    actorEmail: session.user.email,
+    targetType: 'team',
+    targetId: team.id,
+    details: { name: team.name, type: team.type },
+  });
+
   revalidatePath('/admin');
   return team;
 }
 
 export async function deleteTeam(teamId: string) {
-  await requireAdmin();
-  await prisma.team.delete({ where: { id: teamId } });
+  const session = await requireAdmin();
+  const team = await prisma.team.delete({ where: { id: teamId } });
+
+  audit({
+    action: 'team.delete',
+    actorId: session.user.id,
+    actorEmail: session.user.email,
+    targetType: 'team',
+    targetId: teamId,
+    details: { name: team.name, type: team.type },
+  });
+
   revalidatePath('/admin');
 }
 
@@ -37,22 +58,60 @@ export async function addTeamMember(
   userId: string,
   role: 'lead' | 'member' = 'member',
 ) {
-  await requireAdmin();
+  const session = await requireAdmin();
   const member = await prisma.teamMember.create({
     data: { teamId, userId, role },
+    include: { user: { select: { email: true } }, team: { select: { name: true } } },
   });
+
+  audit({
+    action: 'team.member_add',
+    actorId: session.user.id,
+    actorEmail: session.user.email,
+    targetType: 'team',
+    targetId: teamId,
+    details: { team: member.team.name, member: member.user.email, role },
+  });
+
   revalidatePath('/admin');
   return member;
 }
 
 export async function removeTeamMember(memberId: string) {
-  await requireAdmin();
-  await prisma.teamMember.delete({ where: { id: memberId } });
+  const session = await requireAdmin();
+  const member = await prisma.teamMember.delete({
+    where: { id: memberId },
+    include: { user: { select: { email: true } }, team: { select: { name: true } } },
+  });
+
+  audit({
+    action: 'team.member_remove',
+    actorId: session.user.id,
+    actorEmail: session.user.email,
+    targetType: 'team',
+    targetId: member.teamId,
+    details: { team: member.team.name, member: member.user.email },
+  });
+
   revalidatePath('/admin');
 }
 
 export async function updateTeamMemberRole(memberId: string, role: 'lead' | 'member') {
-  await requireAdmin();
-  await prisma.teamMember.update({ where: { id: memberId }, data: { role } });
+  const session = await requireAdmin();
+  const member = await prisma.teamMember.update({
+    where: { id: memberId },
+    data: { role },
+    include: { user: { select: { email: true } }, team: { select: { name: true } } },
+  });
+
+  audit({
+    action: 'team.member_role_change',
+    actorId: session.user.id,
+    actorEmail: session.user.email,
+    targetType: 'team',
+    targetId: member.teamId,
+    details: { team: member.team.name, member: member.user.email, role },
+  });
+
   revalidatePath('/admin');
 }

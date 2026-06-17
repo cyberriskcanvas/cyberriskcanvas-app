@@ -261,8 +261,15 @@ export async function ensureAdminUser() {
 
   const color = AVATAR_COLORS[Math.floor(Math.random() * AVATAR_COLORS.length)];
   const passwordHash = await bcrypt.hash(password, 12);
-  await prisma.user.create({
+  const created = await prisma.user.create({
     data: { email, name, passwordHash, role: 'admin', color },
+  });
+  const { audit } = await import('./audit');
+  audit({
+    action: 'user.create',
+    targetType: 'user',
+    targetId: created.id,
+    details: { email, role: 'admin', bootstrap: true },
   });
   console.warn(`[bootstrap] Admin user created: ${email}`);
 }

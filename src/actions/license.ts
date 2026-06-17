@@ -5,9 +5,10 @@ import { requireAdmin } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { invalidateLicenseCache, validateKey } from '@/lib/license';
 import type { LicenseInfo } from '@/lib/license';
+import { audit } from '@/lib/audit';
 
 export async function saveLicenseKey(key: string): Promise<LicenseInfo> {
-  await requireAdmin();
+  const session = await requireAdmin();
 
   const trimmed = key.trim();
 
@@ -19,6 +20,18 @@ export async function saveLicenseKey(key: string): Promise<LicenseInfo> {
   invalidateLicenseCache();
 
   const info = trimmed ? await validateKey(trimmed) : { valid: false, licensee: null, expiresAt: null };
+
+  audit({
+    action: trimmed ? 'license.save' : 'license.remove',
+    actorId: session.user.id,
+    actorEmail: session.user.email,
+    targetType: 'license',
+    // Never the key itself - only enough to recognise which one.
+    details: trimmed
+      ? { keySuffix: trimmed.slice(-4), valid: info.valid, licensee: info.licensee }
+      : undefined,
+  });
+
   revalidatePath('/', 'layout');
   return info;
 }

@@ -2,7 +2,7 @@
 
 import { requireSession } from '@/lib/auth';
 import { prisma } from '@/lib/db';
-import { assertDiagramAccess } from '@/lib/access';
+import { assertDiagramAccess, assertDiagramWriteAccess } from '@/lib/access';
 import type { SbomComponentData } from '@/types';
 
 interface DbVuln {
@@ -56,7 +56,7 @@ export async function getSbomData(diagramId: string, nodeId: string): Promise<Sb
 
 export async function deleteSbomData(diagramId: string, nodeId: string): Promise<void> {
   const session = await requireSession();
-  await assertDiagramAccess(diagramId, session.user.id);
+  await assertDiagramWriteAccess(diagramId, session.user.id);
 
   await prisma.sbomComponent.deleteMany({ where: { diagramId, nodeId } });
 

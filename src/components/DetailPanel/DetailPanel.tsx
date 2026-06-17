@@ -253,7 +253,7 @@ export function DetailPanel() {
 
       {/* Tab content */}
       <div className="flex-1 overflow-y-auto">
-        {activeTab === 'overview' && <OverviewTab nodeId={selectedNodeId} data={data} nodeType={nodeType} />}
+        {activeTab === 'overview' && <OverviewTab key={selectedNodeId} nodeId={selectedNodeId} data={data} nodeType={nodeType} />}
         {activeTab === 'assets' && <AssetsTab nodeId={selectedNodeId} data={data} />}
         {activeTab === 'threats' && <ThreatsTab nodeId={selectedNodeId} nodeType={nodeType} data={data} />}
         {activeTab === 'risks' && <RisksTab nodeId={selectedNodeId} data={data} />}

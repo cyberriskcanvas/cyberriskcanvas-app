@@ -1,9 +1,10 @@
-import { memo } from 'react';
+import { memo, useState, useRef, useCallback, useEffect } from 'react';
 import { Handle, Position, NodeResizer, type NodeProps, type Node } from '@xyflow/react';
 import { Cpu, Radio, Settings, Router, Shield, Plug, Wifi, HardDrive, Monitor, Database } from 'lucide-react';
 import { cn } from '@/utils/cn';
 import type { NodeData, HardwareComponentType, Threat } from '@/types';
 import { StrideCoverage } from './StrideCoverage';
+import { useDiagramStore } from '@/store/diagramStore';
 
 const ICON_MAP: Record<string, React.ElementType> = {
   ecu: Cpu, sensor: Radio, actuator: Settings, gateway: Router,
@@ -32,12 +33,39 @@ const LABEL_MAP: Record<string, string> = {
   plc: 'PLC', hmi: 'HMI', historian: 'Historian', rtu: 'RTU',
 };
 
-function HardwareNode({ data, selected }: NodeProps<Node<NodeData>>) {
+function HardwareNode({ data, selected, id }: NodeProps<Node<NodeData>>) {
+  const { updateNodeData } = useDiagramStore();
   const ct: HardwareComponentType = (data.componentType as HardwareComponentType) ?? 'custom';
   const colors = COLOR_MAP[ct] ?? COLOR_MAP.custom;
   const Icon = ICON_MAP[ct] ?? HardDrive;
   const risks = data.risks ?? [];
   const threats = (data.threats ?? []) as Threat[];
+  const [editing, setEditing] = useState(false);
+  const [editLabel, setEditLabel] = useState('');
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (editing && inputRef.current) {
+      inputRef.current.focus();
+      inputRef.current.select();
+    }
+  }, [editing]);
+
+  const startEdit = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    setEditLabel(String(data.label));
+    setEditing(true);
+  }, [data.label]);
+
+  const commitEdit = useCallback(() => {
+    updateNodeData(id, { label: editLabel.trim() || String(data.label) });
+    setEditing(false);
+  }, [editLabel, id, updateNodeData, data.label]);
+
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') { e.preventDefault(); commitEdit(); }
+    if (e.key === 'Escape') setEditing(false);
+  }, [commitEdit]);
 
   return (
     <>
@@ -59,7 +87,21 @@ function HardwareNode({ data, selected }: NodeProps<Node<NodeData>>) {
             <Icon size={16} className={colors.icon} />
           </div>
           <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-semibold text-gray-800">{String(data.label)}</p>
+            {editing ? (
+              <input
+                ref={inputRef}
+                value={editLabel}
+                onChange={(e) => setEditLabel(e.target.value)}
+                onBlur={commitEdit}
+                onKeyDown={handleKeyDown}
+                onClick={(e) => e.stopPropagation()}
+                className="w-full rounded border border-indigo-400 bg-white px-1 py-0.5 text-sm font-semibold text-gray-800 outline-none"
+              />
+            ) : (
+              <p className="truncate text-sm font-semibold text-gray-800" onDoubleClick={startEdit} title="Doppelklick zum Umbenennen">
+                {String(data.label)}
+              </p>
+            )}
             <span className={cn('inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-medium', colors.badge)}>
               HW · {LABEL_MAP[ct] ?? ct}
             </span>

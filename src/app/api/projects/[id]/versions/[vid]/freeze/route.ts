@@ -3,6 +3,7 @@ import { authenticateRequest } from '@/lib/apiAuth';
 import { prisma } from '@/lib/db';
 import { TIER_CONFIG } from '@/lib/tierConfig';
 import { assertProjectWriteAccess } from '@/lib/access';
+import { audit } from '@/lib/audit';
 
 interface RouteContext { params: Promise<{ id: string; vid: string }> }
 
@@ -63,6 +64,14 @@ export async function POST(req: NextRequest, ctx: RouteContext) {
       data: { projectId, number: version.number + 1, label: '', status: 'active' },
     }),
   ]);
+
+  audit({
+    action: 'version.freeze',
+    actorId: authResult.userId,
+    targetType: 'version',
+    targetId: versionId,
+    details: { projectId, number: version.number, label, frozenByName },
+  });
 
   return NextResponse.json({
     frozenVersionId: versionId,

@@ -3,6 +3,7 @@ import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { requireTierFeature, TierError } from '@/lib/tierGuard';
 import { generateApiKey } from '@/lib/apiAuth';
+import { audit } from '@/lib/audit';
 
 const MAX_KEYS_PER_USER = 10;
 
@@ -74,6 +75,15 @@ export async function POST(req: NextRequest) {
       prefix,
     },
     select: { id: true, name: true, prefix: true, createdAt: true },
+  });
+
+  audit({
+    action: 'api_key.create',
+    actorId: session.user.id,
+    actorEmail: session.user.email,
+    targetType: 'api_key',
+    targetId: apiKey.id,
+    details: { name: apiKey.name, prefix: apiKey.prefix },
   });
 
   // raw is returned ONCE - it cannot be recovered from the stored hash

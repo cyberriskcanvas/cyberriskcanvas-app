@@ -3,6 +3,7 @@ import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { canAccessProject, assertProjectWriteAccess } from '@/lib/access';
 import { resolveStoragePath, sanitizeFilename } from '@/lib/documentsStorage';
+import { audit } from '@/lib/audit';
 import fs from 'fs/promises';
 
 interface Params {
@@ -77,7 +78,7 @@ export async function DELETE(_req: NextRequest, { params }: Params) {
 
   const doc = await prisma.projectDocument.findUnique({
     where: { id },
-    select: { id: true, storagePath: true, projectId: true },
+    select: { id: true, name: true, storagePath: true, projectId: true },
   });
 
   if (!doc) {
@@ -92,6 +93,15 @@ export async function DELETE(_req: NextRequest, { params }: Params) {
 
   // Delete from DB first - if file deletion fails we at least lose the reference
   await prisma.projectDocument.delete({ where: { id } });
+
+  audit({
+    action: 'document.delete',
+    actorId: session.user.id,
+    actorEmail: session.user.email,
+    targetType: 'document',
+    targetId: id,
+    details: { projectId: doc.projectId, name: doc.name },
+  });
 
   // Best-effort file deletion - don't fail the request if file is already gone
   try {

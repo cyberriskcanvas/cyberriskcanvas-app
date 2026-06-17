@@ -3,6 +3,7 @@ import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { canAccessProject, assertProjectWriteAccess } from '@/lib/access';
 import { resolveEvidencePath, sanitizeFilename } from '@/lib/documentsStorage';
+import { audit } from '@/lib/audit';
 import fs from 'fs/promises';
 
 const MIME_CONTENT_TYPES: Record<string, string> = {
@@ -83,7 +84,7 @@ export async function DELETE(_req: NextRequest, { params }: Params) {
 
   const record = await prisma.measureEvidence.findUnique({
     where: { id: evidenceId },
-    select: { id: true, storagePath: true, projectId: true },
+    select: { id: true, name: true, storagePath: true, projectId: true },
   });
 
   if (!record) {
@@ -97,6 +98,15 @@ export async function DELETE(_req: NextRequest, { params }: Params) {
   }
 
   await prisma.measureEvidence.delete({ where: { id: evidenceId } });
+
+  audit({
+    action: 'evidence.delete',
+    actorId: session.user.id,
+    actorEmail: session.user.email,
+    targetType: 'evidence',
+    targetId: evidenceId,
+    details: { projectId: record.projectId, name: record.name },
+  });
 
   try {
     const absPath = resolveEvidencePath(record.storagePath);

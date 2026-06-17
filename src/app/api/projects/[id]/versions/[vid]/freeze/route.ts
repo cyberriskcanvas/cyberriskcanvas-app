@@ -2,7 +2,7 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { authenticateRequest } from '@/lib/apiAuth';
 import { prisma } from '@/lib/db';
 import { TIER_CONFIG } from '@/lib/tierConfig';
-import { canAccessProject } from '@/lib/access';
+import { assertProjectWriteAccess } from '@/lib/access';
 
 interface RouteContext { params: Promise<{ id: string; vid: string }> }
 
@@ -14,7 +14,9 @@ export async function POST(req: NextRequest, ctx: RouteContext) {
   }
 
   const { id: projectId, vid: versionId } = await ctx.params;
-  if (!await canAccessProject(projectId, authResult.userId)) {
+  try {
+    await assertProjectWriteAccess(projectId, authResult.userId);
+  } catch {
     return NextResponse.json({ error: 'Project not found' }, { status: 404 });
   }
 

@@ -1,7 +1,7 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/db';
-import { canAccessProject } from '@/lib/access';
+import { canAccessProject, assertProjectWriteAccess } from '@/lib/access';
 import { resolveStoragePath, sanitizeFilename } from '@/lib/documentsStorage';
 import fs from 'fs/promises';
 
@@ -84,8 +84,9 @@ export async function DELETE(_req: NextRequest, { params }: Params) {
     return NextResponse.json({ error: 'Document not found' }, { status: 404 });
   }
 
-  const hasAccess = await canAccessProject(doc.projectId, session.user.id);
-  if (!hasAccess) {
+  try {
+    await assertProjectWriteAccess(doc.projectId, session.user.id);
+  } catch {
     return NextResponse.json({ error: 'Document not found' }, { status: 404 });
   }
 

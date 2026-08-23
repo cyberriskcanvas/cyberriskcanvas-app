@@ -7,6 +7,7 @@ import { getLicenseKeyPreview } from '@/actions/license';
 import { getTier } from '@/lib/tierLimits';
 import { TIER_CONFIG } from '@/lib/tierConfig';
 import { listAlertChannels } from '@/actions/alertChannels';
+import { listAuditLog } from '@/actions/audit';
 import AdminClient from '@/components/Admin/AdminClient';
 import { prisma } from '@/lib/db';
 
@@ -22,7 +23,7 @@ export default async function AdminPage() {
 
   const isPro = TIER_CONFIG[await getTier()].sbom;
 
-  const [users, license, keyPreview, teams, alertChannels] = await Promise.all([
+  const [users, license, keyPreview, teams, alertChannels, auditLog] = await Promise.all([
     listUsers(),
     getLicenseInfo(),
     getLicenseKeyPreview(),
@@ -33,6 +34,7 @@ export default async function AdminPage() {
       orderBy: { createdAt: 'asc' },
     }),
     isPro ? listAlertChannels() : Promise.resolve([]),
+    listAuditLog(),
   ]);
 
   return (
@@ -43,6 +45,7 @@ export default async function AdminPage() {
       initialTeams={teams}
       isPro={isPro}
       initialAlertChannels={alertChannels}
+      initialAuditLog={auditLog}
     />
   );
 }

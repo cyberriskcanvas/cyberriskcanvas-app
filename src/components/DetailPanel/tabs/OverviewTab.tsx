@@ -41,10 +41,14 @@ export function OverviewTab({ nodeId, data, nodeType }: Props) {
   return (
     <div className="space-y-4 p-4">
       <Field label={ov.name}>
-        <input value={label} onChange={(e) => setLabel(e.target.value)} placeholder={ov.namePlaceholder} className={inputClass} />
-        <button onClick={() => save({ label })} className="mt-1.5 text-xs text-[#1e293b] hover:underline font-medium">
-          {ov.apply}
-        </button>
+        <input
+          value={label}
+          onChange={(e) => setLabel(e.target.value)}
+          onBlur={() => save({ label })}
+          onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); save({ label }); } }}
+          placeholder={ov.namePlaceholder}
+          className={inputClass}
+        />
       </Field>
 
       {nodeType !== 'boundary' && (
@@ -77,10 +81,14 @@ export function OverviewTab({ nodeId, data, nodeType }: Props) {
 
       {nodeType === 'software' && (
         <Field label={ov.version}>
-          <input value={version} onChange={(e) => setVersion(e.target.value)} placeholder={ov.versionPlaceholder} className={inputClass} />
-          <button onClick={() => save({ version })} className="mt-1.5 text-xs text-[#1e293b] hover:underline font-medium">
-            {ov.apply}
-          </button>
+          <input
+            value={version}
+            onChange={(e) => setVersion(e.target.value)}
+            onBlur={() => save({ version })}
+            onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); save({ version }); } }}
+            placeholder={ov.versionPlaceholder}
+            className={inputClass}
+          />
         </Field>
       )}
 
@@ -88,13 +96,11 @@ export function OverviewTab({ nodeId, data, nodeType }: Props) {
         <textarea
           value={desc}
           onChange={(e) => setDesc(e.target.value)}
+          onBlur={() => save({ description: desc })}
           placeholder={ov.descPlaceholder}
           rows={3}
           className="w-full rounded-lg border border-[#e5e1d8] bg-white px-3 py-1.5 text-sm text-[#1a1917] placeholder-[#c8c0b0] focus:border-[#1e293b] focus:outline-none resize-none"
         />
-        <button onClick={() => save({ description: desc })} className="mt-1.5 text-xs text-[#1e293b] hover:underline font-medium">
-          {ov.apply}
-        </button>
       </Field>
 
       {nodeType !== 'boundary' && (

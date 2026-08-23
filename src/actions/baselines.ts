@@ -3,6 +3,7 @@
 import { requireSession } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { assertProjectAccess, assertProjectWriteAccess } from '@/lib/access';
+import { audit } from '@/lib/audit';
 import { checkTierFeature } from '@/lib/tierGuard';
 import { isTierBlock } from '@/lib/tierBlock';
 import { revalidatePath } from 'next/cache';
@@ -141,6 +142,15 @@ export async function freezeVersion(projectId: string, label: string) {
     });
 
     return { frozenVersionId: activeVersion.id, nextVersion: next };
+  });
+
+  audit({
+    action: 'version.freeze',
+    actorId: session.user.id,
+    actorEmail: session.user.email,
+    targetType: 'version',
+    targetId: frozenVersionId,
+    details: { projectId, number: activeVersion.number, label: label.trim(), frozenByName: frozenByName.trim() },
   });
 
   revalidatePath('/');

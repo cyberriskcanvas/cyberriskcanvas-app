@@ -2,7 +2,7 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { authenticateRequest } from '@/lib/apiAuth';
 import { prisma } from '@/lib/db';
 import { TIER_CONFIG } from '@/lib/tierConfig';
-import { canAccessProject } from '@/lib/access';
+import { canAccessProject, assertProjectWriteAccess } from '@/lib/access';
 
 interface RouteContext { params: Promise<{ id: string }> }
 
@@ -84,7 +84,9 @@ export async function PUT(req: NextRequest, ctx: RouteContext) {
   if (!TIER_CONFIG[authResult.tier].sbom) return NextResponse.json({ error: 'Pro license required.' }, { status: 403 });
 
   const { id: projectId } = await ctx.params;
-  if (!await canAccessProject(projectId, authResult.userId)) {
+  try {
+    await assertProjectWriteAccess(projectId, authResult.userId);
+  } catch {
     return NextResponse.json({ error: 'Project not found' }, { status: 404 });
   }
 

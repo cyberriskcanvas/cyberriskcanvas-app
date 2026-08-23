@@ -4,7 +4,7 @@ import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Shield, Users, Key, ChevronLeft, Plus, Pencil, Trash2,
-  CheckCircle, AlertCircle, X, ChevronDown, ChevronUp, Layers, Bell,
+  CheckCircle, AlertCircle, X, ChevronDown, ChevronUp, Layers, Bell, ScrollText,
 } from 'lucide-react';
 import { createUser, updateUser, deleteUser } from '@/actions/auth';
 import { saveLicenseKey } from '@/actions/license';
@@ -12,6 +12,7 @@ import {
   createAlertChannel, updateAlertChannel, deleteAlertChannel, testAlertChannel,
   type AlertChannelDTO,
 } from '@/actions/alertChannels';
+import { listAuditLog, type AuditLogPage } from '@/actions/audit';
 import type { LicenseInfo } from '@/lib/license';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -39,6 +40,7 @@ interface Props {
   initialTeams: Team[];
   isPro: boolean;
   initialAlertChannels: AlertChannelDTO[];
+  initialAuditLog: AuditLogPage;
 }
 
 const SEVERITIES = ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'] as const;
@@ -197,9 +199,9 @@ function UserModal({
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
-type Section = 'users' | 'teams' | 'license' | 'alerts';
+type Section = 'users' | 'teams' | 'license' | 'alerts' | 'audit';
 
-export default function AdminClient({ initialUsers, license, licenseKeyPreview, initialTeams, isPro, initialAlertChannels }: Props) {
+export default function AdminClient({ initialUsers, license, licenseKeyPreview, initialTeams, isPro, initialAlertChannels, initialAuditLog }: Props) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [section, setSection] = useState<Section>('users');
@@ -227,6 +229,7 @@ export default function AdminClient({ initialUsers, license, licenseKeyPreview, 
     { id: 'users', label: 'Users', icon: <Users size={16} /> },
     { id: 'teams', label: 'Teams', icon: <Layers size={16} /> },
     { id: 'alerts', label: 'Alerts', icon: <Bell size={16} /> },
+    { id: 'audit', label: 'Audit Log', icon: <ScrollText size={16} /> },
     { id: 'license', label: 'License', icon: <Key size={16} /> },
   ];
 
@@ -380,6 +383,10 @@ export default function AdminClient({ initialUsers, license, licenseKeyPreview, 
                 <AlertChannelsSection isPro={isPro} initialChannels={initialAlertChannels} />
               )}
 
+              {section === 'audit' && (
+                <AuditLogSection initial={initialAuditLog} />
+              )}
+
               {section === 'license' && (
                 <LicenseSection license={license} keyPreview={licenseKeyPreview} />
               )}
@@ -388,6 +395,75 @@ export default function AdminClient({ initialUsers, license, licenseKeyPreview, 
         </main>
       </div>
     </>
+  );
+}
+
+// ─── Audit Log Section ────────────────────────────────────────────────────────
+
+function actionBadgeClass(action: string): string {
+  if (/delete|remove/.test(action)) return 'bg-red-900/60 text-red-300';
+  if (/create|add|upload/.test(action)) return 'bg-green-900/60 text-green-300';
+  return 'bg-gray-800 text-gray-400';
+}
+
+function AuditLogSection({ initial }: { initial: AuditLogPage }) {
+  const [entries, setEntries] = useState(initial.entries);
+  const [hasMore, setHasMore] = useState(initial.hasMore);
+  const [isPending, startTransition] = useTransition();
+
+  const loadMore = () => {
+    startTransition(async () => {
+      const page = await listAuditLog(entries.length);
+      setEntries((e) => [...e, ...page.entries]);
+      setHasMore(page.hasMore);
+    });
+  };
+
+  return (
+    <div className="rounded-xl border border-gray-800 bg-gray-900">
+      <div className="border-b border-gray-800 px-6 py-4">
+        <h2 className="text-base font-semibold text-white">Audit Log</h2>
+        <p className="text-xs text-gray-500 mt-0.5">
+          Security-relevant actions: user management, teams, license, API keys, deletions, version freezes.
+        </p>
+      </div>
+
+      <ul className="divide-y divide-gray-800">
+        {entries.map((e) => (
+          <li key={e.id} className="px-6 py-3">
+            <div className="flex items-center gap-3">
+              <span className={`shrink-0 rounded px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${actionBadgeClass(e.action)}`}>
+                {e.action}
+              </span>
+              <span className="truncate text-xs text-gray-400">{e.actorEmail ?? e.actorId ?? 'system'}</span>
+              <span className="ml-auto shrink-0 text-[11px] text-gray-600">
+                {new Date(e.createdAt).toLocaleString()}
+              </span>
+            </div>
+            {e.details && Object.keys(e.details).length > 0 && (
+              <p className="mt-1 truncate text-xs text-gray-500">
+                {Object.entries(e.details).map(([k, v]) => `${k}: ${String(v)}`).join(' · ')}
+              </p>
+            )}
+          </li>
+        ))}
+        {entries.length === 0 && (
+          <li className="px-6 py-8 text-center text-sm text-gray-600">No audit entries yet.</li>
+        )}
+      </ul>
+
+      {hasMore && (
+        <div className="border-t border-gray-800 px-6 py-3">
+          <button
+            onClick={loadMore}
+            disabled={isPending}
+            className="rounded-lg border border-gray-700 px-3 py-1.5 text-sm text-gray-400 hover:bg-gray-800 hover:text-white transition-colors disabled:opacity-50"
+          >
+            {isPending ? 'Loading…' : 'Load more'}
+          </button>
+        </div>
+      )}
+    </div>
   );
 }
 

@@ -2,7 +2,7 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { authenticateRequest } from '@/lib/apiAuth';
 import { prisma } from '@/lib/db';
 import { TIER_CONFIG } from '@/lib/tierConfig';
-import { canAccessProject } from '@/lib/access';
+import { assertProjectWriteAccess } from '@/lib/access';
 
 const VALID_STATUSES = ['open', 'in_triage', 'not_affected', 'fixed'] as const;
 
@@ -19,8 +19,9 @@ export async function PATCH(req: NextRequest, ctx: RouteContext) {
 
   const { id: projectId, vulnId } = await ctx.params;
 
-  const hasAccess = await canAccessProject(projectId, authResult.userId);
-  if (!hasAccess) {
+  try {
+    await assertProjectWriteAccess(projectId, authResult.userId);
+  } catch {
     return NextResponse.json({ error: 'Project not found' }, { status: 404 });
   }
 

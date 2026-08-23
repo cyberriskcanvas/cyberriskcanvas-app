@@ -7,6 +7,7 @@ import { getTier } from './tierLimits';
 import { getLicenseChangedAt } from './license';
 import { TIER_CONFIG } from './tierConfig';
 import { AVATAR_COLORS } from './constants';
+import { isLoginBlocked, registerFailedLogin, clearLoginFailures } from './loginRateLimit';
 
 /**
  * External identity providers (SSO), configured via env vars and gated behind
@@ -78,17 +79,30 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         email: { label: 'Email', type: 'email' },
         password: { label: 'Password', type: 'password' },
       },
-      authorize: async (credentials) => {
+      authorize: async (credentials, request) => {
         const email = String(credentials?.email ?? '').toLowerCase();
         const password = String(credentials?.password ?? '');
         if (!email || !password) return null;
 
+        // Behind a reverse proxy the first x-forwarded-for hop is the client.
+        const ip = request?.headers?.get('x-forwarded-for')?.split(',')[0]?.trim() || null;
+        if (await isLoginBlocked(email, ip)) return null;
+
         const user = await prisma.user.findUnique({ where: { email } });
-        if (!user?.passwordHash) return null;
+        if (!user?.passwordHash) {
+          // Count attempts against unknown accounts too - otherwise an
+          // attacker could probe e-mail existence via the rate limiter.
+          await registerFailedLogin(email, ip);
+          return null;
+        }
 
         const valid = await bcrypt.compare(password, user.passwordHash);
-        if (!valid) return null;
+        if (!valid) {
+          await registerFailedLogin(email, ip);
+          return null;
+        }
 
+        await clearLoginFailures(email);
         return buildUser(user.id);
       },
     }),
@@ -127,6 +141,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
       const email = String(profile?.email ?? user.email ?? '').toLowerCase();
       if (!email) return '/login?error=SsoNoEmail';
+
+      // Accounts are linked purely by e-mail, so an unverified address at the
+      // IdP would allow taking over an existing local account. Reject when the
+      // IdP explicitly marks the address unverified; absent claims are allowed
+      // because some IdPs (e.g. Microsoft Entra ID) never send email_verified.
+      if (profile?.email_verified === false) return '/login?error=SsoEmailUnverified';
 
       // Just-in-time provisioning: create the account on first SSO login.
       // Team membership stays an admin task, same as for manually created users.
@@ -176,12 +196,17 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       const TIER_TTL_MS = 5 * 60 * 1000;
       const lastRefresh = (token.tierRefreshedAt as number | undefined) ?? 0;
       if (Date.now() - lastRefresh > TIER_TTL_MS || getLicenseChangedAt() > lastRefresh) {
-        const fresh = await buildUser(token.id as string).catch(() => null);
-        if (fresh) {
+        try {
+          const fresh = await buildUser(token.id as string);
+          // User no longer exists - invalidate the session instead of letting
+          // the deleted account keep its (possibly admin) claims until expiry.
+          if (!fresh) return null;
           token.tier = fresh.tier;
           token.role = fresh.role;
           token.companyName = fresh.companyName;
           token.companyLogo = fresh.companyLogo;
+        } catch {
+          // Transient DB error - keep the existing claims and retry after the TTL.
         }
         token.tierRefreshedAt = Date.now();
       }
@@ -236,8 +261,15 @@ export async function ensureAdminUser() {
 
   const color = AVATAR_COLORS[Math.floor(Math.random() * AVATAR_COLORS.length)];
   const passwordHash = await bcrypt.hash(password, 12);
-  await prisma.user.create({
+  const created = await prisma.user.create({
     data: { email, name, passwordHash, role: 'admin', color },
+  });
+  const { audit } = await import('./audit');
+  audit({
+    action: 'user.create',
+    targetType: 'user',
+    targetId: created.id,
+    details: { email, role: 'admin', bootstrap: true },
   });
   console.warn(`[bootstrap] Admin user created: ${email}`);
 }

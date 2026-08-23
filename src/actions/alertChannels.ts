@@ -5,6 +5,7 @@ import { requireAdmin } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { requireTierFeature } from '@/lib/tierGuard';
 import { sendTestAlert, type WebhookResult } from '@/lib/alerting';
+import { audit } from '@/lib/audit';
 
 export interface AlertChannelDTO {
   id: string;
@@ -18,9 +19,10 @@ export interface AlertChannelDTO {
 const VALID_TYPES = ['slack', 'teams', 'generic'];
 const VALID_SEVERITIES = ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'];
 
-async function requireProAdmin(): Promise<void> {
-  await requireAdmin();
+async function requireProAdmin() {
+  const session = await requireAdmin();
   await requireTierFeature('sbom');
+  return session;
 }
 
 /** Shows the host only - the path of a Slack/Teams webhook URL is itself a secret. */
@@ -51,7 +53,7 @@ export async function listAlertChannels(): Promise<AlertChannelDTO[]> {
 }
 
 export async function createAlertChannel(input: { url: string; type: string; minSeverity: string }): Promise<AlertChannelDTO> {
-  await requireProAdmin();
+  const session = await requireProAdmin();
 
   const url = input.url.trim();
   if (!/^https?:\/\//i.test(url)) throw new Error('Webhook URL must start with http:// or https://');
@@ -61,12 +63,23 @@ export async function createAlertChannel(input: { url: string; type: string; min
   const channel = await prisma.alertChannel.create({
     data: { url, type: input.type, minSeverity: input.minSeverity },
   });
+
+  audit({
+    action: 'alert_channel.create',
+    actorId: session.user.id,
+    actorEmail: session.user.email,
+    targetType: 'alert_channel',
+    targetId: channel.id,
+    // The webhook path is a secret - log only the masked host.
+    details: { type: channel.type, url: maskUrl(channel.url), minSeverity: channel.minSeverity },
+  });
+
   revalidatePath('/admin');
   return toDTO(channel);
 }
 
 export async function updateAlertChannel(id: string, input: { active?: boolean; minSeverity?: string }): Promise<AlertChannelDTO> {
-  await requireProAdmin();
+  const session = await requireProAdmin();
 
   if (input.minSeverity && !VALID_SEVERITIES.includes(input.minSeverity)) throw new Error('Invalid severity threshold');
 
@@ -77,13 +90,36 @@ export async function updateAlertChannel(id: string, input: { active?: boolean; 
       ...(input.minSeverity ? { minSeverity: input.minSeverity } : {}),
     },
   });
+
+  audit({
+    action: 'alert_channel.update',
+    actorId: session.user.id,
+    actorEmail: session.user.email,
+    targetType: 'alert_channel',
+    targetId: id,
+    details: {
+      ...(input.active !== undefined ? { active: input.active } : {}),
+      ...(input.minSeverity ? { minSeverity: input.minSeverity } : {}),
+    },
+  });
+
   revalidatePath('/admin');
   return toDTO(channel);
 }
 
 export async function deleteAlertChannel(id: string): Promise<void> {
-  await requireProAdmin();
-  await prisma.alertChannel.delete({ where: { id } });
+  const session = await requireProAdmin();
+  const channel = await prisma.alertChannel.delete({ where: { id } });
+
+  audit({
+    action: 'alert_channel.delete',
+    actorId: session.user.id,
+    actorEmail: session.user.email,
+    targetType: 'alert_channel',
+    targetId: id,
+    details: { type: channel.type, url: maskUrl(channel.url) },
+  });
+
   revalidatePath('/admin');
 }
 

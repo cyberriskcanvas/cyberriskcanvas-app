@@ -8,6 +8,7 @@ import { Shield, Eye, EyeOff, AlertCircle, KeyRound } from 'lucide-react';
 const SSO_ERROR_MESSAGES: Record<string, string> = {
   SsoRequiresPro: 'Single sign-on requires a Pro license.',
   SsoNoEmail: 'Your identity provider did not return an e-mail address.',
+  SsoEmailUnverified: 'Your e-mail address is not verified at your identity provider.',
   AccessDenied: 'Access denied by the identity provider.',
 };
 

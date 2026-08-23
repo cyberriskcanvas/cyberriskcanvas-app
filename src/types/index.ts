@@ -14,11 +14,19 @@ export type BoundaryType = 'trust-zone' | 'network-segment' | 'physical-zone' | 
 
 // ─── Assessment Data ──────────────────────────────────────────────────────────
 
+export type AssetCategory = 'financial' | 'operational' | 'privacy' | 'safety' | 'other' | 'data' | 'functional' | 'security';
+
 export interface Asset {
   id: string;
   name: string;
-  category: 'financial' | 'operational' | 'privacy' | 'safety' | 'other';
+  category: AssetCategory;
   description?: string;
+  // BSI TR-03183-1 fields
+  bsiCode?: string;
+  confidentiality?: 1 | 2 | 3 | 4 | 5;
+  integrity?: 1 | 2 | 3 | 4 | 5;
+  availability?: 1 | 2 | 3 | 4 | 5;
+  amplifier?: number;
 }
 
 export interface Threat {
@@ -32,6 +40,13 @@ export interface Threat {
 
 export type RiskLevel = 'critical' | 'high' | 'medium' | 'low' | 'negligible';
 
+export interface BSIEnvironmentParameters {
+  interface?: 'physical' | 'local' | 'dedicated_network' | 'known_network' | 'external_network';
+  access?: 'restricted' | 'public_restricted' | 'movable' | 'non_restricted';
+  userCapability?: 'skilled' | 'instructed' | 'layman' | 'non_user_related';
+  calculatedLikelihood?: 1 | 2 | 3 | 4 | 5;
+}
+
 export interface Risk {
   id: string;
   threatId: string;
@@ -40,6 +55,10 @@ export interface Risk {
   level: RiskLevel;
   mitigation?: string;
   status: 'open' | 'in-progress' | 'mitigated';
+  bsiEnvironment?: BSIEnvironmentParameters;
+  acceptanceReason?: string;
+  acceptedBy?: string;
+  acceptanceDate?: string;
 }
 
 export interface IEC62443Mapping {
@@ -91,15 +110,27 @@ export interface SecurityTest {
 // Using a single interface avoids discriminated-union issues with React Flow's
 // applyNodeChanges() which re-creates node objects generically.
 
+export type ComponentScope = 'placed_component' | 'rdps_backend' | 'external_3rd_party';
+
 export interface NodeData extends Record<string, unknown> {
   label: string;
   // Hardware/Software component type
   componentType?: HardwareComponentType | SoftwareComponentType;
   // Boundary type
   boundaryType?: BoundaryType;
+  // CRA / TR-03183 Scope: Placed Component vs RDPS Backend vs External 3rd Party
+  scope?: ComponentScope;
   // Optional metadata
   version?: string;
   description?: string;
+  // BSI TR-03183-2 SBOM fields
+  actualFilename?: string;
+  isExecutable?: boolean;
+  isArchive?: boolean;
+  isStructured?: boolean;
+  deployableHashSha512?: string;
+  concludedLicense?: string;
+  securityTxtUrl?: string;
   // Assessment fields
   assets?: Asset[];
   threats?: Threat[];

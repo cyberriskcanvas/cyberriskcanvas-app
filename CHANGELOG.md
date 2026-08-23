@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.2.0] - 2026-08-23
+
+### Added
+
+- **BSI TR-03183-1 Standard Asset Catalog**: Predefined data, functional, and security assets from Tables 1–3 with baseline C/I/A ratings (1–5) and amplifier support (`PII.*`, `BusinessData.*`, `Functions.*`, `Security.*`).
+- **BSI Environment / Likelihood Calculator (TR-03183-1 Annex D)**: Objective likelihood determination based on interface restrictions, access restrictions, and user capabilities using the formula `round(1 + Interface * Access * UserCapability) * 4`.
+- **BSI Risk Acceptance Validation**: Enforce explicit justification rationale for accepting moderate, high, or critical risks ($\ge 3$) according to BSI TR-03183-1 §5.14.3.
+- **Component Scope Classification**: Tag components as *Placed Component* (on-market product), *RDPS Backend* (manufacturer cloud), or *External 3rd-Party* per CRA Art. 3(1)/(2) and TR-03183-H.
+- **Harmonized CRA Requirements (BSI TR-03183-1 Annex B)**: Full coverage of official CRA Annex I Part I (`ER.0–ER.14a`) and Part II (`VH.1–VH.8a`) IDs and regulatory texts with legacy ID alias support.
+
+---
+
 ## [1.1.0] - 2026-08-23
 
 ### Changed

@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.1.0] - 2026-08-23
+
+### Changed
+
+- Upgraded base Docker images and CI pipelines to Node.js 26 (`node:26-alpine`)
+- Replaced `corepack` configuration with `npm install -g yarn` across Dockerfiles and CI workflows
+- Upgraded dependencies to latest releases:
+  - `ioredis` v6.0.0
+  - `tailwind-merge` v3.6.0 (improved Tailwind CSS v4 class conflict resolution)
+  - `dotenv` v17.4.2
+  - `next` 16.3.2 & `next-auth` 5.0.0-beta.32
+  - `@prisma/client` & `prisma` 7.9.1
+  - `react` & `react-dom` 19.2.8
+  - `@anthropic-ai/sdk` 0.120.0
+  - `@xyflow/react` 12.11.3
+  - `lucide-react` 1.33.0
+  - `react-joyride` 3.2.0
+  - `pg` 8.23.0, `tsx` 4.23.12, `zustand` 5.0.15
+
+---
+
 ## [1.0.0] - 2026-06-06
 
 First stable release of CyberRisk Canvas - a self-hosted, open-core TARA tool

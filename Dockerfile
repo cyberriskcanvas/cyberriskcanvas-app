@@ -21,6 +21,7 @@ RUN npm install -g yarn
 
 # Suppress Prisma connection attempts during build (no DB available).
 ENV DATABASE_URL=postgresql://placeholder:placeholder@localhost:5432/placeholder
+ENV NEXT_TELEMETRY_DISABLED=1
 
 COPY package.json yarn.lock ./
 COPY prisma ./prisma/
@@ -36,6 +37,8 @@ WORKDIR /app
 
 RUN apk add --no-cache openssl
 RUN npm install -g yarn
+
+ENV NEXT_TELEMETRY_DISABLED=1
 
 COPY --from=builder --chown=node:node /app/.next ./.next
 COPY --from=dependencies --chown=node:node /app/node_modules ./node_modules

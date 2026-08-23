@@ -9,6 +9,7 @@ COPY prisma ./prisma/
 COPY prisma.config.ts ./
 RUN yarn install
 ENV DATABASE_URL=postgresql://placeholder:placeholder@localhost:5432/placeholder
+ENV NEXT_TELEMETRY_DISABLED=1
 RUN yarn prisma:generate
 
 EXPOSE 3000

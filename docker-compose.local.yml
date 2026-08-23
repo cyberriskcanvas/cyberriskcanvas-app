@@ -42,6 +42,7 @@ services:
       # Required for file-watching through Docker on macOS
       - WATCHPACK_POLLING=true
       - CHOKIDAR_USEPOLLING=true
+      - NEXT_TELEMETRY_DISABLED=1
     ports:
       - "3000:3000"
     volumes:

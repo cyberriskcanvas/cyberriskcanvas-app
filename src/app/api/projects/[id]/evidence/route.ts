@@ -3,7 +3,7 @@ import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { assertProjectWriteAccess } from '@/lib/access';
 import {
-  EVIDENCE_DIR,
+  resolveEvidencePath,
   MAX_EVIDENCE_SIZE,
   MAX_EVIDENCE_PER_MEASURE,
   EVIDENCE_ALLOWED_MIMES,
@@ -80,7 +80,7 @@ export async function POST(req: NextRequest, { params }: Params) {
   const displayName = sanitizeFilename(file.name || `evidence.${ext}`);
   const uuid = crypto.randomUUID();
   const storagePath = `${projectId}/${uuid}.${ext}`;
-  const absPath = path.join(EVIDENCE_DIR, projectId, `${uuid}.${ext}`);
+  const absPath = resolveEvidencePath(storagePath);
   await fs.mkdir(path.dirname(absPath), { recursive: true });
   await fs.writeFile(absPath, bytes, { mode: 0o640 });
 

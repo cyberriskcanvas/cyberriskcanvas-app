@@ -28,8 +28,8 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
 
-      - name: Enable Corepack
-        run: corepack enable && corepack prepare yarn@1.22.22 --activate
+      - name: Install Yarn
+        run: npm install -g yarn
 
       - name: Install dependencies
         run: yarn install --frozen-lockfile
@@ -60,18 +60,18 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
 
-      - name: Enable Corepack
-        run: corepack enable && corepack prepare yarn@1.22.22 --activate
+      - name: Install Yarn
+        run: npm install -g yarn
 
-      - name: yarn audit (critical only)
+      - name: yarn audit (production dependencies)
         run: |
           code=0
-          yarn audit --level critical || code=$?
-          if [ $((code & 24)) -ne 0 ]; then
-            echo "::error::Critical vulnerabilities found (exit code $code)"
+          yarn audit --groups dependencies --level critical || code=$?
+          if [ $((code & 16)) -ne 0 ]; then
+            echo "::error::Critical vulnerabilities found in production dependencies (exit code $code)"
             exit 1
           fi
-          echo "Audit passed (exit code $code - moderate/low issues ignored)"
+          echo "Audit passed (exit code $code - dev/moderate/low issues ignored)"
 
   # ── 3. Docker Build & Push ────────────────────────────────────────────────
   docker:

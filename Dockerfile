@@ -7,7 +7,7 @@ LABEL org.opencontainers.image.source="https://github.com/cyberriskcanvas/cyberr
 WORKDIR /app
 
 RUN apk add --no-cache openssl
-RUN npm install -g yarn@1.22.22
+RUN npm install -g yarn
 
 COPY package.json yarn.lock ./
 RUN yarn install --prod --frozen-lockfile
@@ -17,10 +17,11 @@ FROM node:${NODE_VERSION} AS builder
 WORKDIR /app
 
 RUN apk add --no-cache openssl
-RUN npm install -g yarn@1.22.22
+RUN npm install -g yarn
 
 # Suppress Prisma connection attempts during build (no DB available).
 ENV DATABASE_URL=postgresql://placeholder:placeholder@localhost:5432/placeholder
+ENV NEXT_TELEMETRY_DISABLED=1
 
 COPY package.json yarn.lock ./
 COPY prisma ./prisma/
@@ -35,7 +36,9 @@ FROM node:${NODE_VERSION} AS runner
 WORKDIR /app
 
 RUN apk add --no-cache openssl
-RUN npm install -g yarn@1.22.22
+RUN npm install -g yarn
+
+ENV NEXT_TELEMETRY_DISABLED=1
 
 COPY --from=builder --chown=node:node /app/.next ./.next
 COPY --from=dependencies --chown=node:node /app/node_modules ./node_modules

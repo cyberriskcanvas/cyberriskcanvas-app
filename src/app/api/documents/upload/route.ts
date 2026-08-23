@@ -3,7 +3,7 @@ import { authenticateRequest } from '@/lib/apiAuth';
 import { prisma } from '@/lib/db';
 import { assertProjectWriteAccess } from '@/lib/access';
 import { TIER_CONFIG } from '@/lib/tierConfig';
-import { DOCUMENTS_DIR, MAX_PDF_SIZE, MAX_DOCS_PER_PROJECT, sanitizeFilename } from '@/lib/documentsStorage';
+import { resolveStoragePath, MAX_PDF_SIZE, MAX_DOCS_PER_PROJECT, sanitizeFilename } from '@/lib/documentsStorage';
 import { audit } from '@/lib/audit';
 import fs from 'fs/promises';
 import path from 'path';
@@ -64,7 +64,7 @@ export async function POST(req: NextRequest) {
 
   const uuid = crypto.randomUUID();
   const storagePath = `${projectId}/${uuid}.pdf`;
-  const absPath = path.join(DOCUMENTS_DIR, projectId, `${uuid}.pdf`);
+  const absPath = resolveStoragePath(storagePath);
   await fs.mkdir(path.dirname(absPath), { recursive: true });
   await fs.writeFile(absPath, bytes, { mode: 0o640 });
 

@@ -17,9 +17,9 @@ export const EVIDENCE_DIR = process.env.EVIDENCE_DIR ?? DEFAULT_EVIDENCE_DIR;
 /** Returns absolute path for a stored document given its storagePath. */
 export function resolveStoragePath(storagePath: string): string {
   // storagePath is always "<projectId>/<uuid>.pdf" - no user input in it
-  const abs = path.join(DOCUMENTS_DIR, storagePath);
+  const abs = path.join(/*turbopackIgnore: true*/ DOCUMENTS_DIR, storagePath);
   // Extra guard: ensure the resolved path stays within DOCUMENTS_DIR
-  if (!abs.startsWith(path.resolve(DOCUMENTS_DIR) + path.sep)) {
+  if (!abs.startsWith(path.resolve(/*turbopackIgnore: true*/ DOCUMENTS_DIR) + path.sep)) {
     throw new Error('Invalid storage path');
   }
   return abs;
@@ -27,8 +27,8 @@ export function resolveStoragePath(storagePath: string): string {
 
 /** Returns absolute path for a stored evidence file given its storagePath. */
 export function resolveEvidencePath(storagePath: string): string {
-  const abs = path.join(EVIDENCE_DIR, storagePath);
-  if (!abs.startsWith(path.resolve(EVIDENCE_DIR) + path.sep)) {
+  const abs = path.join(/*turbopackIgnore: true*/ EVIDENCE_DIR, storagePath);
+  if (!abs.startsWith(path.resolve(/*turbopackIgnore: true*/ EVIDENCE_DIR) + path.sep)) {
     throw new Error('Invalid storage path');
   }
   return abs;

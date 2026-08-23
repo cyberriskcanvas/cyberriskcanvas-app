@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Plus, Trash2, Database, Pencil, X, Sparkles, Shield, BookmarkCheck } from 'lucide-react';
+import { Plus, Trash2, Database, Pencil, X, Shield, BookmarkCheck } from 'lucide-react';
 import { useDiagramStore } from '@/store/diagramStore';
 import type { NodeData, Asset, AssetCategory } from '@/types';
 import { BSI_ASSET_CATALOG, findBsiAsset } from '@/data/bsiAssets';

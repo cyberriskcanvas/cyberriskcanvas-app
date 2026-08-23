@@ -95,12 +95,22 @@ function SoftwareNode({ data, selected, id }: NodeProps<Node<NodeData>>) {
                 {String(data.label)}
               </p>
             )}
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1 flex-wrap mt-0.5">
               <span className={cn('inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-medium', colors.badge)}>
                 SW · {LABEL_MAP[ct] ?? ct}
               </span>
               {data.version && (
                 <span className="text-[10px] text-gray-400 font-mono">v{String(data.version)}</span>
+              )}
+              {data.scope === 'rdps_backend' && (
+                <span className="rounded bg-sky-100 border border-sky-300 text-sky-800 px-1 text-[9px] font-bold">
+                  RDPS
+                </span>
+              )}
+              {data.scope === 'external_3rd_party' && (
+                <span className="rounded bg-amber-100 border border-amber-300 text-amber-800 px-1 text-[9px] font-bold">
+                  3rd Party
+                </span>
               )}
             </div>
           </div>

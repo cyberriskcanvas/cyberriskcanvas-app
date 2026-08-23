@@ -15,6 +15,9 @@ for (const req of [...IEC62443_4_2, ...IEC62443_3_3]) {
 const CRA_REQ_TO_DOMAIN: Record<string, CRADomain> = {};
 for (const req of CRA_REQUIREMENTS) {
   CRA_REQ_TO_DOMAIN[req.id] = req.domain;
+  if (req.legacyId) {
+    CRA_REQ_TO_DOMAIN[req.legacyId] = req.domain;
+  }
 }
 
 const IEC_CATEGORIES = ['IAC', 'UC', 'SI', 'DC', 'RDF', 'TRE', 'RA'] as const;
@@ -38,24 +41,24 @@ const IEC_CATEGORY_FULL: Record<string, string> = {
 };
 
 const CRA_DOMAINS_ORDER: CRADomain[] = [
-  'scope',
-  'product_context',
-  'secure_development',
-  'risk_assessment',
-  'vulnerability_handling',
+  'cra_part1_properties',
+  'cra_part2_vulnerability',
   'user_transparency',
   'technical_documentation',
-  'classification',
+  'scope_classification',
 ];
 
-const CRA_DOMAIN_SHORT: Record<CRADomain, string> = {
+const CRA_DOMAIN_SHORT: Record<string, string> = {
+  cra_part1_properties: 'Teil I Eigensch.',
+  cra_part2_vulnerability: 'Teil II Schwachst.',
+  user_transparency: 'Anhang II Nutzer',
+  technical_documentation: 'Anhang VII Doku',
+  scope_classification: 'Geltungsbereich',
   scope: 'Scope',
   product_context: 'Product',
   secure_development: 'Sec. Dev',
   risk_assessment: 'Risk',
   vulnerability_handling: 'Vuln.',
-  user_transparency: 'Transp.',
-  technical_documentation: 'Docs',
   classification: 'Class.',
 };
 

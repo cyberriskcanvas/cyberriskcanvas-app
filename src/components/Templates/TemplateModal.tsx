@@ -44,6 +44,9 @@ const ASSET_CATEGORY_COLORS: Record<Asset['category'], string> = {
   operational: 'bg-blue-50 text-blue-700',
   privacy: 'bg-purple-50 text-purple-700',
   safety: 'bg-red-50 text-red-700',
+  data: 'bg-cyan-50 text-cyan-700',
+  functional: 'bg-emerald-50 text-emerald-700',
+  security: 'bg-amber-50 text-amber-700',
   other: 'bg-gray-100 text-gray-600',
 };
 

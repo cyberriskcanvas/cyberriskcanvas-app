@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.3.0] - 2026-08-23
+
+### Added
+
+- **BSI TR-03183-2 SBOM Generator & Export**: Export full CycloneDX v1.6 and SPDX v3.0.1 compliant SBOMs with BSI property taxonomy (`bsi:component:filename`, `executable`, `archive`, `structured`, `effectiveLicense`, SHA-512 hashes) and strict separation from vulnerability data.
+- **BSI TR-03183-3 security.txt & CVD-Policy Generator**: RFC 9116 / RFC 9580 generator with ordered contacts (PSIRT, CSIRT, Web Reporting), OpenPGP key references, preferred languages, and CVD policy templates with guaranteed response SLAs.
+- **CRA Article 14 Statutory Reporting Tracker**: Timeline and countdown tracker for 24h Early Warning, 72h Vulnerability Notification, and 14-day Final Report obligations to CSIRT (CERT-Bund) and ENISA.
+
+---
+
 ## [1.2.0] - 2026-08-23
 
 ### Added

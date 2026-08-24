@@ -5,12 +5,14 @@ import { CheckCircle2, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
 import { CsafStepGate } from './CsafStepGate';
 import { CsafStepMetadata } from './CsafStepMetadata';
 import { CsafStepPreview } from './CsafStepPreview';
+import { CraReportingTracker } from './CraReportingTracker';
 import type { CsafDraft, TriageInfo, WizardStep } from './types';
 
 const STEPS: { id: WizardStep; label: string }[] = [
-  { id: 'gate',     label: 'Triage' },
-  { id: 'metadata', label: 'Dokument' },
-  { id: 'preview',  label: 'Vorschau & Export' },
+  { id: 'gate',      label: 'Triage' },
+  { id: 'metadata',  label: 'Dokument' },
+  { id: 'preview',   label: 'Vorschau & Export' },
+  { id: 'reporting', label: 'CRA Art. 14 Meldung' },
 ];
 
 const DEFAULT_DRAFT: CsafDraft = {
@@ -162,6 +164,13 @@ export function CsafWizardView({ projectId, projectName, companyName }: Props) {
         )}
         {step === 'preview' && (
           <CsafStepPreview projectId={projectId} />
+        )}
+        {step === 'reporting' && (
+          <CraReportingTracker
+            projectId={projectId}
+            projectName={projectName}
+            cvssScore={triage.derivedSeverity === 'CRITICAL' ? 9.8 : triage.derivedSeverity === 'HIGH' ? 8.2 : 5.5}
+          />
         )}
       </div>
 

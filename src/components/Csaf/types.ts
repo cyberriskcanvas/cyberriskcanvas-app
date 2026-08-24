@@ -21,4 +21,4 @@ export interface TriageInfo {
   derivedSeverity: string;
 }
 
-export type WizardStep = 'gate' | 'metadata' | 'preview';
+export type WizardStep = 'gate' | 'metadata' | 'preview' | 'reporting';

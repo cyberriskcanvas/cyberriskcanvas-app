@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.4.0] - 2026-08-24
+
+### Added
+
+- **BSI TR-03183-H Module H & Statement of Applicability (SoA)**: Support for CRA Annex VIII full quality assurance based on ISO/IEC 27001 + ISO 9001 quality processes. Includes an automated SoA generator exporting CRA applicability statements in JSON, CSV, and Markdown formats (`/api/projects/[id]/soa`).
+- **NIST OSCAL v1.1.0 JSON Export**: Standardized machine-readable assessment results export (`/api/projects/[id]/oscal`) linking canvas architecture, threats, BSI risk evaluation, and CRA controls per BSI TR-03183-1 Section 7.
+- **BSI TR-03185 Secure Software Lifecycle Catalog**: Comprehensive checklist of manufacturer requirements (`PROD.DEV`, `PROD.TEST`, `PROD.FIX`, `PROD.REL`), Open-Source FLOSS controls (`GV`, `LE`, `QA`, `BR`, `VM`), and Artificial Intelligence governance rules (`AI.GOV.01`, `AI.TEST.01`).
+
+---
+
 ## [1.3.0] - 2026-08-23
 
 ### Added

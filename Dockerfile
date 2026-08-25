@@ -6,18 +6,22 @@ FROM node:${NODE_VERSION} AS dependencies
 LABEL org.opencontainers.image.source="https://github.com/cyberriskcanvas/cyberriskcanvas-app"
 WORKDIR /app
 
-RUN apk add --no-cache openssl
-RUN npm install -g yarn
+RUN apk add --no-cache openssl libc6-compat && \
+    npm install -g yarn && \
+    npm cache clean --force
 
 COPY package.json yarn.lock ./
-RUN yarn install --prod --frozen-lockfile
+RUN yarn install --prod --frozen-lockfile --ignore-scripts && \
+    yarn cache clean && \
+    rm -rf /root/.cache /tmp/*
 
 # ── Stage 2: Build Next.js (all deps needed for CSS/TS compilation) ───────────
 FROM node:${NODE_VERSION} AS builder
 WORKDIR /app
 
-RUN apk add --no-cache openssl
-RUN npm install -g yarn
+RUN apk add --no-cache openssl libc6-compat && \
+    npm install -g yarn && \
+    npm cache clean --force
 
 # Suppress Prisma connection attempts during build (no DB available).
 ENV DATABASE_URL=postgresql://placeholder:placeholder@localhost:5432/placeholder
@@ -26,18 +30,24 @@ ENV NEXT_TELEMETRY_DISABLED=1
 COPY package.json yarn.lock ./
 COPY prisma ./prisma/
 COPY prisma.config.ts ./
-RUN yarn install
+RUN yarn install --frozen-lockfile
+
 COPY . .
 RUN yarn prisma:generate
 RUN yarn build
+
+# Delete Next.js build cache to avoid copying GBs into the final runner image
+RUN rm -rf .next/cache
 
 # ── Stage 3: Production runner ────────────────────────────────────────────────
 FROM node:${NODE_VERSION} AS runner
 WORKDIR /app
 
-RUN apk add --no-cache openssl
-RUN npm install -g yarn
+RUN apk add --no-cache openssl libc6-compat && \
+    npm install -g yarn && \
+    npm cache clean --force
 
+ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 
 COPY --from=builder --chown=node:node /app/.next ./.next

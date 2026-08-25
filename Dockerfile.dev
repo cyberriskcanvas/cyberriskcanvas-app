@@ -1,8 +1,9 @@
 FROM node:26-alpine
 WORKDIR /app
 
-RUN apk add --no-cache openssl
-RUN npm install -g yarn
+RUN apk add --no-cache openssl libc6-compat && \
+    npm install -g yarn && \
+    npm cache clean --force
 
 COPY package.json yarn.lock ./
 COPY prisma ./prisma/

@@ -8,12 +8,34 @@ Open-source cybersecurity engineering platform for product security teams - thre
 
 ---
 
+## Requirement mapping
+
+Where each compliance obligation is actually covered in the product:
+
+| Requirement | What it demands | Covered by |
+| --- | --- | --- |
+| **EU CRA Annex I, Part I** — risk assessment | Systematic cybersecurity risk assessment across the product lifecycle | Visual architecture canvas, STRIDE threat modeling, BSI Annex D likelihood calculator |
+| **EU CRA Annex I, ER.0–ER.14a** | Essential cybersecurity requirements (secure by design/default, vulnerability handling capability) | Requirement-by-requirement mapping in the TARA workflow |
+| **EU CRA Art. 13** — SBOM | Software bill of materials covering top-level dependencies | CycloneDX 1.2-1.6 / SPDX 2.x SBOM import with BSI TR-03183-2 taxonomy + OSV.dev vulnerability detection |
+| **EU CRA Annex I, Part II, VH.1–VH.8a** | Vulnerability handling process obligations | CSAF 2.0 wizard, CycloneDX VEX 1.4 export, CRA Art. 14 notification tracker (24h/72h/14d), periodic OSV.dev re-scan |
+| **EU CRA Module H / Annex VII** | Statement of Applicability & technical documentation | Audit-ready PDF export, frozen version snapshots (TARA + SBOM) |
+| **IEC 62443** | Zone/conduit modeling, control mapping | Zone/conduit modeling on the canvas, IEC 62443 control mapping |
+| **NIS-2 (Art. 21/23)** | Risk-assessment and incident-reporting documentation | TARA workflow + audit trail (risk-assessment slice; not a full GRC platform) |
+
+See [cyberriskcanvas.com](https://cyberriskcanvas.com) for the EU CRA / IEC 62443 background and a live demo (no signup).
+
+---
+
 ## Features
 
 ### Community (free)
 
 - Visual architecture canvas - drag-and-drop components, data flows, trust boundaries
 - TARA workflow - STRIDE classification, risk assessment, treatment tracking
+- **BSI TR-03183-1 Asset Catalog** - pre-defined data, functional, and security protection assets with baseline C/I/A ratings
+- **BSI Annex D Environment Calculator** - objective likelihood formula based on interface, access, and user capability
+- **BSI TR-03185 SDL Checklists** - developer checklists for proprietary software (`PROD.*`), open source (`OSS.*`), and AI governance (`AI.*`)
+- **Harmonized CRA Annex I Mapping** - official `ER.0–ER.14a` and `VH.1–VH.8a` requirements with legacy alias resolution
 - IEC 62443 control mapping
 - Real-time collaboration
 - Team management (product teams + cross-functional review teams)
@@ -21,8 +43,13 @@ Open-source cybersecurity engineering platform for product security teams - thre
 
 ### Pro (license key required)
 
-- Audit-ready PDF export with company logo
+- Audit-ready PDF export with company logo & CRA Annex VII technical dossier
 - **Project versioning** - freeze versions with TARA + SBOM snapshots, CSAF advisory global across versions
+- **BSI TR-03183-2 SBOM export** (CycloneDX 1.6 & SPDX 3.0.1) with official BSI property taxonomy (`bsi:component:*`, SHA-512)
+- **BSI TR-03183-3 security.txt & CVD policy generator** (RFC 9116 / RFC 9580)
+- **CRA Article 14 statutory reporting tracker** (24h early warning, 72h report, 14-day final report to CERT-Bund & ENISA)
+- **CRA Statement of Applicability (SoA)** export in JSON, CSV, and Markdown formats for Module H
+- **NIST OSCAL v1.1.0** machine-readable assessment results export
 - AI threat analysis - CWE suggestions, scenario generation, IEC 62443 recommendations
 - **SBOM import** (CycloneDX 1.2-1.6 + SPDX 2.x) with automatic vulnerability detection via OSV.dev
 - **CVE monitoring** - periodic re-scan of all uploaded SBOMs against OSV.dev, plus a cross-project **Security Overview** for review teams and admins
@@ -30,7 +57,7 @@ Open-source cybersecurity engineering platform for product security teams - thre
 - Attack path visualization
 - Change history & audit trail
 - White-label reports
-- REST API access with Bearer token authentication
+- REST API access with Bearer token authentication (SBOM, Triage, Versioning, CSAF, SoA, OSCAL)
 - **Single Sign-On (SSO)** - generic OIDC (Keycloak, Okta, Auth0, ...) and Microsoft Entra ID
 
 ---

@@ -1,6 +1,7 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import type { DiagramSummary } from './aggregateDiagram';
+import { generateStatementOfApplicability } from '@/data/tr03183h';
 
 const BRAND = [79, 70, 229] as [number, number, number]; // brand-600 indigo
 const DARK = [17, 24, 39] as [number, number, number];
@@ -74,7 +75,7 @@ export async function exportPdf(diagramName: string, summary: DiagramSummary): P
 
   // ─── Page 2: Components ───────────────────────────────────────────────────────
   doc.addPage();
-  addPageHeader(doc, 'Components', 2, 9);
+  addPageHeader(doc, 'Components', 2, 10);
 
   let y = sectionTitle(doc, '1. System Components', 22);
   if (summary.components.length === 0) {
@@ -101,7 +102,7 @@ export async function exportPdf(diagramName: string, summary: DiagramSummary): P
 
   // ─── Page 3: Threats ─────────────────────────────────────────────────────────
   doc.addPage();
-  addPageHeader(doc, 'Threats', 3, 9);
+  addPageHeader(doc, 'Threats', 3, 10);
   y = sectionTitle(doc, '2. Threat Analysis', 22);
 
   if (summary.threats.length === 0) {
@@ -122,7 +123,7 @@ export async function exportPdf(diagramName: string, summary: DiagramSummary): P
 
   // ─── Page 4: Risks ────────────────────────────────────────────────────────────
   doc.addPage();
-  addPageHeader(doc, 'Risks', 4, 9);
+  addPageHeader(doc, 'Risks', 4, 10);
   y = sectionTitle(doc, '3. Risk Assessment', 22);
 
   const riskLevelColors: Record<string, [number, number, number]> = {
@@ -163,7 +164,7 @@ export async function exportPdf(diagramName: string, summary: DiagramSummary): P
 
   // ─── Page 5: IEC 62443 ────────────────────────────────────────────────────────
   doc.addPage();
-  addPageHeader(doc, 'IEC 62443', 5, 9);
+  addPageHeader(doc, 'IEC 62443', 5, 10);
   y = sectionTitle(doc, '4. IEC 62443 Compliance', 22);
 
   if (summary.compliance.length === 0) {
@@ -184,7 +185,7 @@ export async function exportPdf(diagramName: string, summary: DiagramSummary): P
 
   // ─── Page 6: CRA Compliance ───────────────────────────────────────────────────
   doc.addPage();
-  addPageHeader(doc, 'CRA', 6, 9);
+  addPageHeader(doc, 'CRA', 6, 10);
   y = sectionTitle(doc, '5. CRA Compliance (EU 2024/2847)', 22);
 
   if (summary.craCompliance.length === 0) {
@@ -208,7 +209,7 @@ export async function exportPdf(diagramName: string, summary: DiagramSummary): P
 
   // ─── Page 7: Measures ─────────────────────────────────────────────────────────
   doc.addPage();
-  addPageHeader(doc, 'Measures', 7, 9);
+  addPageHeader(doc, 'Measures', 7, 10);
   y = sectionTitle(doc, '6. Security Measures', 22);
 
   if (summary.measures.length === 0) {
@@ -234,7 +235,7 @@ export async function exportPdf(diagramName: string, summary: DiagramSummary): P
 
   // ─── Page 8: Traceability Matrix ──────────────────────────────────────────────
   doc.addPage();
-  addPageHeader(doc, 'Traceability', 8, 9);
+  addPageHeader(doc, 'Traceability', 8, 10);
   y = sectionTitle(doc, '7. Traceability Matrix', 22);
 
   if (summary.traceabilityRows.length === 0) {
@@ -271,21 +272,61 @@ export async function exportPdf(diagramName: string, summary: DiagramSummary): P
 
   // ─── Page 9: Assets ───────────────────────────────────────────────────────────
   doc.addPage();
-  addPageHeader(doc, 'Assets', 9, 9);
-  y = sectionTitle(doc, '8. Asset Register', 22);
+  addPageHeader(doc, 'Assets', 9, 10);
+  y = sectionTitle(doc, '8. Asset Register (BSI TR-03183-1)', 22);
 
   if (summary.assets.length === 0) {
     doc.setFontSize(9); doc.text('No assets defined.', 14, y);
   } else {
     autoTable(doc, {
       startY: y,
-      head: [['Component', 'Asset Name', 'Category', 'Description']],
-      body: summary.assets.map((a) => [a.componentLabel, a.name, a.category, a.description ?? '-']),
-      styles: { fontSize: 8, cellPadding: 2 },
+      head: [['Component', 'Asset Name', 'Category', 'C', 'I', 'A', 'Max Imp.', 'Description']],
+      body: summary.assets.map((a) => {
+        const c = a.confidentiality ?? 1;
+        const i = a.integrity ?? 1;
+        const av = a.availability ?? 1;
+        const max = Math.max(c, i, av);
+        return [
+          a.componentLabel,
+          a.name,
+          a.category,
+          String(c),
+          String(i),
+          String(av),
+          String(max),
+          a.description ?? '-',
+        ];
+      }),
+      styles: { fontSize: 7.5, cellPadding: 2 },
       headStyles: { fillColor: BRAND, textColor: [255, 255, 255] },
       alternateRowStyles: { fillColor: [248, 250, 255] },
     });
   }
+
+  // ─── Page 10: Statement of Applicability (SoA) ────────────────────────────────
+  doc.addPage();
+  addPageHeader(doc, 'Statement of Applicability', 10, 10);
+  y = sectionTitle(doc, '9. CRA Statement of Applicability (BSI TR-03183-H)', 22);
+
+  const allMappings = summary.components.flatMap((c) => (c.data.cra ?? []) as Array<{ requirementId: string; status: 'compliant' | 'partial' | 'non-compliant' | 'not-applicable'; notes?: string }>);
+  const soaRows = generateStatementOfApplicability(allMappings);
+
+  autoTable(doc, {
+    startY: y,
+    head: [['ID', 'Title', 'CRA Ref.', 'Applicable', 'Status', 'Justification / Evidence']],
+    body: soaRows.map((r) => [
+      r.requirementId,
+      r.title,
+      r.craRef,
+      r.applicable ? 'Yes' : 'No',
+      r.status,
+      r.justification ?? r.evidence ?? '-',
+    ]),
+    styles: { fontSize: 6.5, cellPadding: 1.5 },
+    headStyles: { fillColor: BRAND, textColor: [255, 255, 255] },
+    alternateRowStyles: { fillColor: [248, 250, 255] },
+    columnStyles: { 1: { cellWidth: 40 }, 5: { cellWidth: 50 } },
+  });
 
   doc.save(`CRA-${diagramName.replace(/\s+/g, '-')}-${new Date().toISOString().slice(0, 10)}.pdf`);
 }

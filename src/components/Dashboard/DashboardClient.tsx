@@ -1,9 +1,20 @@
 'use client';
 
-import { useEffect, useMemo, useState, useCallback } from 'react';
+import { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { ArrowLeft, FileText, RefreshCw, Shield } from 'lucide-react';
+import {
+  ArrowLeft,
+  FileText,
+  RefreshCw,
+  Shield,
+  Download,
+  ChevronDown,
+  FileSpreadsheet,
+  Code,
+  Sparkles,
+  Key,
+} from 'lucide-react';
 import { aggregateDiagram } from '@/utils/aggregateDiagram';
 import { exportPdf } from '@/utils/exportPdf';
 import { SummaryCards } from '@/components/Dashboard/SummaryCards';
@@ -15,7 +26,9 @@ import { TraceabilityMatrix } from '@/components/Dashboard/TraceabilityMatrix';
 import { NextSteps } from '@/components/Dashboard/NextSteps';
 import { CRAReadinessPanel } from '@/components/Dashboard/CRAReadinessPanel';
 import { MultiStandardMatrix } from '@/components/Dashboard/MultiStandardMatrix';
+import { SDLChecklistPanel } from '@/components/Dashboard/SDLChecklistPanel';
 import { BaselineBanner } from '@/components/Baseline/BaselineBanner';
+import { SecurityTxtModal } from '@/components/Compliance/SecurityTxtModal';
 import { useProjectStore } from '@/store/projectStore';
 import type { DiagramNode } from '@/types';
 
@@ -23,6 +36,7 @@ const TABS = [
   { id: 'overview', label: 'Overview' },
   { id: 'risks', label: 'Risks' },
   { id: 'compliance', label: 'Compliance' },
+  { id: 'sdl_checklist', label: 'BSI TR-03185 SDL' },
   { id: 'measures', label: 'Measures' },
 ] as const;
 
@@ -47,6 +61,10 @@ interface Props {
 export default function DashboardClient({ diagramId, projectId, diagramName, initialNodes, lockState }: Props) {
   const [nodes] = useState<DiagramNode[]>(initialNodes as DiagramNode[]);
   const [exporting, setExporting] = useState<'pdf' | null>(null);
+  const [exportMenuOpen, setExportMenuOpen] = useState(false);
+  const [securityTxtOpen, setSecurityTxtOpen] = useState(false);
+  const exportMenuRef = useRef<HTMLDivElement>(null);
+
   const { setProject } = useProjectStore();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -61,6 +79,16 @@ export default function DashboardClient({ diagramId, projectId, diagramName, ini
   }, [router, searchParams]);
 
   useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (exportMenuRef.current && !exportMenuRef.current.contains(e.target as Node)) {
+        setExportMenuOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  useEffect(() => {
     setProject({
       projectId,
       activeVersion: lockState.isLocked
@@ -73,6 +101,7 @@ export default function DashboardClient({ diagramId, projectId, diagramName, ini
 
   const handleExportPdf = () => {
     setExporting('pdf');
+    setExportMenuOpen(false);
     exportPdf(diagramName, summary).finally(() => setExporting(null));
   };
 
@@ -97,12 +126,113 @@ export default function DashboardClient({ diagramId, projectId, diagramName, ini
                 )}
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <button onClick={handleExportPdf} disabled={exporting !== null}
-                className="flex items-center gap-2 rounded-lg bg-[#1e293b] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[#374151] disabled:opacity-50">
+
+            {/* Export Actions Menu */}
+            <div className="relative flex items-center gap-2" ref={exportMenuRef}>
+              <button
+                onClick={handleExportPdf}
+                disabled={exporting !== null}
+                className="flex items-center gap-2 rounded-lg bg-[#1e293b] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[#374151] disabled:opacity-50"
+              >
                 {exporting === 'pdf' ? <RefreshCw size={13} className="animate-spin" /> : <FileText size={13} />}
                 Export PDF
               </button>
+
+              <button
+                onClick={() => setExportMenuOpen(!exportMenuOpen)}
+                className="flex items-center gap-1.5 rounded-lg border border-[#e5e1d8] bg-white px-2.5 py-1.5 text-xs font-semibold text-[#1a1917] hover:bg-[#faf9f7]"
+              >
+                <Download size={13} />
+                Compliance Exporte
+                <ChevronDown size={12} className={exportMenuOpen ? 'rotate-180 transition-transform' : 'transition-transform'} />
+              </button>
+
+              {exportMenuOpen && (
+                <div className="absolute right-0 top-full mt-1.5 w-72 rounded-xl border border-[#e5e1d8] bg-white p-1.5 shadow-xl z-50 text-xs">
+                  <div className="px-2.5 py-1.5 text-[10px] font-bold uppercase text-[#6b6460] border-b border-[#f4f1ec]">
+                    BSI &amp; CRA Exportformate
+                  </div>
+
+                  <a
+                    href={`/api/projects/${projectId}/sbom/export?format=cyclonedx`}
+                    download
+                    onClick={() => setExportMenuOpen(false)}
+                    className="flex items-center gap-2.5 rounded-lg px-2.5 py-2 hover:bg-[#faf9f7] text-[#1a1917] transition-colors"
+                  >
+                    <Code size={14} className="text-indigo-600" />
+                    <div>
+                      <div className="font-semibold">BSI CycloneDX 1.6 SBOM</div>
+                      <div className="text-[10px] text-[#6b6460]">BSI TR-03183-2 Taxonomie &amp; SHA-512</div>
+                    </div>
+                  </a>
+
+                  <a
+                    href={`/api/projects/${projectId}/sbom/export?format=spdx`}
+                    download
+                    onClick={() => setExportMenuOpen(false)}
+                    className="flex items-center gap-2.5 rounded-lg px-2.5 py-2 hover:bg-[#faf9f7] text-[#1a1917] transition-colors"
+                  >
+                    <Code size={14} className="text-cyan-600" />
+                    <div>
+                      <div className="font-semibold">BSI SPDX 3.0.1 SBOM</div>
+                      <div className="text-[10px] text-[#6b6460]">SPDX 3.0 JSON-LD Standard</div>
+                    </div>
+                  </a>
+
+                  <a
+                    href={`/api/projects/${projectId}/soa?format=csv`}
+                    download
+                    onClick={() => setExportMenuOpen(false)}
+                    className="flex items-center gap-2.5 rounded-lg px-2.5 py-2 hover:bg-[#faf9f7] text-[#1a1917] transition-colors"
+                  >
+                    <FileSpreadsheet size={14} className="text-green-600" />
+                    <div>
+                      <div className="font-semibold">CRA Statement of Applicability (SoA)</div>
+                      <div className="text-[10px] text-[#6b6460]">CSV Tabelle nach BSI TR-03183-H</div>
+                    </div>
+                  </a>
+
+                  <a
+                    href={`/api/projects/${projectId}/soa?format=md`}
+                    download
+                    onClick={() => setExportMenuOpen(false)}
+                    className="flex items-center gap-2.5 rounded-lg px-2.5 py-2 hover:bg-[#faf9f7] text-[#1a1917] transition-colors"
+                  >
+                    <FileText size={14} className="text-amber-600" />
+                    <div>
+                      <div className="font-semibold">CRA SoA Bericht (Markdown)</div>
+                      <div className="text-[10px] text-[#6b6460]">Auditsichere Markdown-Dokumentation</div>
+                    </div>
+                  </a>
+
+                  <a
+                    href={`/api/projects/${projectId}/oscal`}
+                    download
+                    onClick={() => setExportMenuOpen(false)}
+                    className="flex items-center gap-2.5 rounded-lg px-2.5 py-2 hover:bg-[#faf9f7] text-[#1a1917] transition-colors"
+                  >
+                    <Sparkles size={14} className="text-purple-600" />
+                    <div>
+                      <div className="font-semibold">NIST OSCAL v1.1.0 JSON</div>
+                      <div className="text-[10px] text-[#6b6460]">Maschinenlesbare Prüfergebnisse</div>
+                    </div>
+                  </a>
+
+                  <button
+                    onClick={() => {
+                      setExportMenuOpen(false);
+                      setSecurityTxtOpen(true);
+                    }}
+                    className="w-full flex items-center gap-2.5 rounded-lg px-2.5 py-2 hover:bg-[#faf9f7] text-[#1a1917] transition-colors border-t border-[#f4f1ec] mt-1"
+                  >
+                    <Key size={14} className="text-blue-600" />
+                    <div className="text-left">
+                      <div className="font-semibold">security.txt &amp; CVD-Policy</div>
+                      <div className="text-[10px] text-[#6b6460]">RFC 9116 / BSI TR-03183-3 Generator</div>
+                    </div>
+                  </button>
+                </div>
+              )}
             </div>
           </div>
 
@@ -150,10 +280,20 @@ export default function DashboardClient({ diagramId, projectId, diagramName, ini
           </div>
         )}
 
+        {validTab === 'sdl_checklist' && (
+          <SDLChecklistPanel />
+        )}
+
         {validTab === 'measures' && (
           <MeasuresProgress measures={summary.measures} />
         )}
       </main>
+
+      <SecurityTxtModal
+        isOpen={securityTxtOpen}
+        onClose={() => setSecurityTxtOpen(false)}
+        projectName={diagramName}
+      />
     </div>
   );
 }

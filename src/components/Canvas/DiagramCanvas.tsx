@@ -269,74 +269,80 @@ export function DiagramCanvas({ diagramId, highlightedPath }: DiagramCanvasProps
       const rawData = e.dataTransfer.getData('application/cyberrisk');
       if (!rawData) return;
 
-      const dragData = JSON.parse(rawData) as DragData;
+      try {
+        const dragData = JSON.parse(rawData) as DragData;
 
-      // Convert screen coords to flow coords
-      const wrapperRect = rfWrapper.current?.getBoundingClientRect();
-      if (!wrapperRect) return;
-      const { transform } = (window as unknown as { __rf_transform?: [number, number, number] }).__rf_transform
-        ? { transform: (window as unknown as { __rf_transform: [number, number, number] }).__rf_transform }
-        : { transform: [viewport.x, viewport.y, viewport.zoom] as [number, number, number] };
+        // Convert screen coords to flow coords
+        const wrapperRect = rfWrapper.current?.getBoundingClientRect();
+        if (!wrapperRect) return;
+        const { transform } = (window as unknown as { __rf_transform?: [number, number, number] }).__rf_transform
+          ? { transform: (window as unknown as { __rf_transform: [number, number, number] }).__rf_transform }
+          : { transform: [viewport.x, viewport.y, viewport.zoom] as [number, number, number] };
 
-      const x = (e.clientX - wrapperRect.left - transform[0]) / transform[2];
-      const y = (e.clientY - wrapperRect.top - transform[1]) / transform[2];
+        const x = (e.clientX - wrapperRect.left - transform[0]) / transform[2];
+        const y = (e.clientY - wrapperRect.top - transform[1]) / transform[2];
 
-      const id = crypto.randomUUID();
+        const id = crypto.randomUUID();
 
-      let node: DiagramNode;
-      if (dragData.nodeType === 'hardware') {
-        node = {
-          id,
-          type: 'hardware',
-          position: { x, y },
-          data: { label: dragData.label, componentType: dragData.componentType } as HardwareNodeData,
-        };
-      } else if (dragData.nodeType === 'software') {
-        node = {
-          id,
-          type: 'software',
-          position: { x, y },
-          data: { label: dragData.label, componentType: dragData.componentType } as SoftwareNodeData,
-        };
-      } else if (dragData.nodeType === 'note') {
-        node = {
-          id,
-          type: 'note',
-          position: { x, y },
-          style: { width: 200, height: 120 },
-          data: { label: '' } as NoteNodeData,
-        };
-      } else {
-        node = {
-          id,
-          type: 'boundary',
-          position: { x: x - 100, y: y - 75 },
-          style: { width: 300, height: 200 },
-          data: { label: dragData.label, boundaryType: dragData.componentType } as BoundaryNodeData,
-        };
-      }
-
-      // Auto-parent component nodes dropped onto a boundary
-      if (dragData.nodeType !== 'boundary' && dragData.nodeType !== 'note') {
-        const currentNodes = useDiagramStore.getState().nodes;
-        const boundaryNodes = currentNodes.filter((n) => n.type === 'boundary');
-        const container = findContainingBoundary(boundaryNodes, { x, y });
-        if (container) {
+        let node: DiagramNode;
+        if (dragData.nodeType === 'hardware') {
           node = {
-            ...node,
-            parentId: container.id,
-            position: {
-              x: x - container.position.x,
-              y: y - container.position.y,
-            },
+            id,
+            type: 'hardware',
+            position: { x, y },
+            data: { label: dragData.label, componentType: dragData.componentType } as HardwareNodeData,
+          };
+        } else if (dragData.nodeType === 'software') {
+          node = {
+            id,
+            type: 'software',
+            position: { x, y },
+            data: { label: dragData.label, componentType: dragData.componentType } as SoftwareNodeData,
+          };
+        } else if (dragData.nodeType === 'note') {
+          node = {
+            id,
+            type: 'note',
+            position: { x, y },
+            style: { width: 200, height: 120 },
+            data: { label: '' } as NoteNodeData,
+          };
+        } else {
+          node = {
+            id,
+            type: 'boundary',
+            position: { x: x - 100, y: y - 75 },
+            style: { width: 300, height: 200 },
+            data: { label: dragData.label, boundaryType: dragData.componentType } as BoundaryNodeData,
           };
         }
-      }
 
-      addNode(node);
-      const updated = useDiagramStore.getState().nodes;
-      broadcastNodes(updated);
-      scheduleSave();
+        // Auto-parent component nodes dropped onto a boundary
+        if (dragData.nodeType !== 'boundary' && dragData.nodeType !== 'note') {
+          const currentNodes = useDiagramStore.getState().nodes;
+          const boundaryNodes = currentNodes.filter((n) => n.type === 'boundary');
+          const container = findContainingBoundary(boundaryNodes, { x, y });
+          if (container) {
+            node = {
+              ...node,
+              parentId: container.id,
+              position: {
+                x: x - container.position.x,
+                y: y - container.position.y,
+              },
+            };
+          }
+        }
+
+        addNode(node);
+        const updated = useDiagramStore.getState().nodes;
+        broadcastNodes(updated);
+        scheduleSave();
+      } catch (err) {
+        // Without this the drop fails silently and the component simply never appears.
+        console.error('drop failed', err);
+        setSaveError('Komponente konnte nicht eingefügt werden. Bitte Seite neu laden.');
+      }
     },
     [addNode, broadcastNodes, scheduleSave, viewport],
   );

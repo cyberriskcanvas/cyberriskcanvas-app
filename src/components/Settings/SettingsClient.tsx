@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { updateUserProfile, changePassword, deleteAccount } from '@/actions/auth';
+import { copyText } from '@/lib/insecureContext';
 
 interface TeamMembership {
   id: string;
@@ -236,7 +237,7 @@ export default function SettingsClient({ user, apiKeys: initialApiKeys }: Props)
 
   function handleCopyKey() {
     if (!newlyCreatedKey) return;
-    void navigator.clipboard.writeText(newlyCreatedKey);
+    void copyText(newlyCreatedKey);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   }

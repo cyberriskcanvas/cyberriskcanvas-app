@@ -187,7 +187,9 @@ export function OnboardingTour({ userId }: Props) {
       scrollToFirstStep={false}
       onEvent={handleEvent}
       options={{
-        overlayColor: 'rgba(0, 0, 0, 0.45)',
+        // The overlay swallows pointer events on everything outside the spotlight,
+        // which blocked dragging components from the sidebar while the tour ran.
+        hideOverlay: true,
         overlayClickAction: false,
         skipScroll: true,
         showProgress: true,

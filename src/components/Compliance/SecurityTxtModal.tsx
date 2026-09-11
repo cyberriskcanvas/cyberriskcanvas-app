@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { X, Copy, Check, Download, Shield } from 'lucide-react';
 import { generateBsiSecurityTxt, generateBsiCvdPolicy, type SecurityTxtConfig } from '@/data/securityTxt';
 import { cn } from '@/utils/cn';
+import { copyText } from '@/lib/insecureContext';
 
 interface Props {
   isOpen: boolean;
@@ -43,7 +44,7 @@ export function SecurityTxtModal({ isOpen, onClose, projectName, companyName }: 
   const currentContent = activeTab === 'security_txt' ? securityTxtContent : cvdPolicyContent;
 
   const handleCopy = () => {
-    navigator.clipboard.writeText(currentContent);
+    void copyText(currentContent);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };

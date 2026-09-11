@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.4.1] - 2026-09-11
+
+### Fixed
+
+- **Drag-and-drop on http deployments**: Dragging components from the sidebar onto the canvas silently failed on instances served over plain http. `crypto.randomUUID()` is only available in a secure context (https or localhost), so the drop handler threw before the node was created. A `getRandomValues`-based fallback is now installed on the client, which also restores the affected threat, risk, measure, SBOM, and security test entry paths.
+- **Clipboard buttons without https**: Copying the generated API key and the `security.txt` content used `navigator.clipboard`, which is likewise unavailable in a non-secure context. Both now fall back to a legacy copy path.
+- **Onboarding tour blocking the canvas**: The tour overlay captured pointer events outside its spotlight, so components could not be dragged while the tour was running — even though step 1 asks the user to do exactly that. The overlay is now hidden.
+- **Silent drop failures**: Errors in the canvas drop handler are logged and surfaced as a banner instead of leaving the user without feedback.
+
+### Changed
+
+- Optimized the multi-stage Docker build, reducing the production image size by roughly 85%.
+
+---
+
 ## [1.4.0] - 2026-08-24
 
 ### Added

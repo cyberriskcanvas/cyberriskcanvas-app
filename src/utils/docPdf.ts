@@ -1,63 +1,39 @@
-import jsPDF from 'jspdf';
+import type { Content } from 'pdfmake/interfaces';
 import type { DeclarationDoc } from './docGenerators';
+import { BRAND, downloadPdf, inline, pdfDocument } from './pdf';
 
-const BRAND: [number, number, number] = [79, 70, 229];
-const MARGIN = 18;
-const WIDTH = 210 - 2 * MARGIN;
-
-function newDoc(): { doc: jsPDF; y: number } {
-  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-  return { doc, y: MARGIN };
-}
-
-/** Writes wrapped text, adding pages when needed; returns the new y. */
-function write(doc: jsPDF, text: string, y: number, opts: { size: number; bold?: boolean; indent?: number; gap?: number; italic?: boolean; color?: [number, number, number] }): number {
-  doc.setFont('helvetica', opts.bold ? 'bold' : opts.italic ? 'italic' : 'normal');
-  doc.setFontSize(opts.size);
-  doc.setTextColor(...(opts.color ?? [17, 24, 39]));
-  const lines = doc.splitTextToSize(text, WIDTH - (opts.indent ?? 0)) as string[];
-  const lineH = opts.size * 0.42;
-  for (const line of lines) {
-    if (y + lineH > 297 - MARGIN) { doc.addPage(); y = MARGIN; }
-    doc.text(line, MARGIN + (opts.indent ?? 0), y);
-    y += lineH;
-  }
-  return y + (opts.gap ?? 2);
-}
+const GREY = '#6b6460';
 
 /** Simple renderer for the generated Markdown (headings, lists, quotes, paragraphs). */
 export function exportMarkdownPdf(markdown: string, filename: string) {
-  const { doc, y: startY } = newDoc();
-  let y = startY;
+  const content: Content[] = [];
   for (const raw of markdown.split('\n')) {
     const line = raw.trimEnd();
-    if (!line) { y += 1; continue; }
-    if (line.startsWith('# ')) y = write(doc, line.slice(2), y, { size: 17, bold: true, gap: 4, color: BRAND });
-    else if (line.startsWith('## ')) y = write(doc, line.slice(3), y + 2, { size: 12.5, bold: true, gap: 2 });
-    else if (line.startsWith('### ')) y = write(doc, line.slice(4), y + 1, { size: 10.5, bold: true, gap: 1 });
-    else if (line.startsWith('> ')) y = write(doc, line.slice(2), y, { size: 9, italic: true, gap: 3, color: [107, 100, 96] });
-    else if (line.startsWith('- ')) y = write(doc, `•  ${line.slice(2).replace(/\*\*/g, '')}`, y, { size: 10, indent: 3, gap: 1 });
-    else y = write(doc, line.replace(/\*\*/g, ''), y, { size: 10, gap: 2 });
+    if (!line) content.push({ text: '', margin: [0, 0, 0, 2] });
+    else if (line.startsWith('# ')) content.push({ text: line.slice(2), fontSize: 17, bold: true, color: BRAND, margin: [0, 0, 0, 8] });
+    else if (line.startsWith('## ')) content.push({ text: line.slice(3), fontSize: 12.5, bold: true, margin: [0, 6, 0, 4] });
+    else if (line.startsWith('### ')) content.push({ text: line.slice(4), fontSize: 10.5, bold: true, margin: [0, 3, 0, 2] });
+    else if (line.startsWith('> ')) content.push({ text: line.slice(2), fontSize: 9, italics: true, color: GREY, margin: [0, 0, 0, 6] });
+    else if (line.startsWith('- ')) content.push({ ...inline(`•  ${line.slice(2)}`), margin: [9, 0, 0, 2] });
+    else content.push({ ...inline(line), margin: [0, 0, 0, 3] });
   }
-  doc.save(filename);
+  return downloadPdf(pdfDocument(content, { pageMargins: [51, 51, 51, 51] }), filename);
 }
 
 export function exportDeclarationPdf(d: DeclarationDoc, filename: string) {
-  const { doc, y: startY } = newDoc();
-  let y = startY;
-  y = write(doc, d.title, y, { size: 18, bold: true, gap: 3, color: BRAND });
-  y = write(doc, d.draftNote, y, { size: 8.5, italic: true, gap: 6, color: [180, 83, 9] });
-  for (const [label, value] of d.rows) {
-    y = write(doc, label, y, { size: 9, bold: true, gap: 0.5 });
-    y = write(doc, value, y, { size: 10, indent: 3, gap: 3.5 });
-  }
-  y += 2;
-  for (const s of d.statements) y = write(doc, s, y, { size: 10, gap: 3 });
-  y += 8;
-  y = write(doc, `${d.signature.place}: ____________________________`, y, { size: 10, gap: 8 });
-  y = write(doc, `${d.signature.signer}: ____________________________`, y, { size: 10, gap: 10 });
-  y = write(doc, d.simplified.heading, y, { size: 11, bold: true, gap: 2 });
-  y = write(doc, d.simplified.text, y, { size: 10, gap: 2 });
-  if (d.simplified.full) write(doc, d.simplified.full, y, { size: 10, gap: 2 });
-  doc.save(filename);
+  const content: Content[] = [
+    { text: d.title, fontSize: 18, bold: true, color: BRAND, margin: [0, 0, 0, 6] },
+    { text: d.draftNote, fontSize: 8.5, italics: true, color: '#b45309', margin: [0, 0, 0, 14] },
+    ...d.rows.flatMap(([label, value]): Content[] => [
+      { text: label, fontSize: 9, bold: true, margin: [0, 0, 0, 1] },
+      { text: value, margin: [9, 0, 0, 8] },
+    ]),
+    ...d.statements.map((s): Content => ({ text: s, margin: [0, 6, 0, 3] })),
+    { text: `${d.signature.place}: ____________________________`, margin: [0, 24, 0, 20] },
+    { text: `${d.signature.signer}: ____________________________`, margin: [0, 0, 0, 28] },
+    { text: d.simplified.heading, fontSize: 11, bold: true, margin: [0, 0, 0, 5] },
+    { text: d.simplified.text, margin: [0, 0, 0, 5] },
+    ...(d.simplified.full ? [{ text: d.simplified.full } as Content] : []),
+  ];
+  return downloadPdf(pdfDocument(content, { pageMargins: [51, 51, 51, 51] }), filename);
 }

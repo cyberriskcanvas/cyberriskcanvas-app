@@ -20,7 +20,7 @@ jobs:
     uses: ./.github/workflows/checks.yml
 
   # ── 3. Image: build, start it against a database and smoke-test it, then publish ──
-  # The public repository publishes the core edition (ghcr.io/cyberriskcanvas/cyberriskcanvas-core);
+  # The public repository publishes the core edition (ghcr.io/cyberriskcanvas/cyberriskcanvas-app);
   # in the private Pro repository this job only checks, the image is published by release.yml.
   docker:
     name: Docker image
@@ -31,7 +31,7 @@ jobs:
       packages: write
     env:
       EDITION: ${{ github.repository == 'cyberriskcanvas/cyberriskcanvas-pro' && 'pro' || 'core' }}
-      IMAGE: ghcr.io/cyberriskcanvas/cyberriskcanvas-core
+      IMAGE: ghcr.io/cyberriskcanvas/cyberriskcanvas-app
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/crc
     services:
       postgres:
@@ -45,6 +45,10 @@ jobs:
           --health-cmd "pg_isready -U postgres -d crc" --health-interval 5s --health-timeout 5s --health-retries 10
 
     steps:
+      # The runner has about 14 GB free; the image build, its layer cache and node_modules for the smoke test need more
+      - name: Free disk space
+        run: sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL && df -h / | tail -1
+
       - uses: actions/checkout@v6
 
       - name: Set up Docker Buildx

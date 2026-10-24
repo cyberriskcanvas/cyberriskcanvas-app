@@ -298,10 +298,10 @@ Register the redirect URI with your identity provider:
 
 | Image | Contains | Built from |
 |---|---|---|
-| `ghcr.io/cyberriskcanvas/cyberriskcanvas-core` | The open-source core edition: everything in this repository. Pro features show a hint instead. | this repository, on every push to `main` |
-| `ghcr.io/cyberriskcanvas/cyberriskcanvas-app` | The full product. Without a license key it behaves like the free tier; with a key from [cyberriskcanvas.com/pricing](https://cyberriskcanvas.com/de#pricing) (Settings → License) the Pro features unlock. | the private Pro repository |
+| `ghcr.io/cyberriskcanvas/cyberriskcanvas-app` | The open-source core edition: everything in this repository. Pro features show a hint instead. | this repository, on every push to `main` |
+| `ghcr.io/cyberriskcanvas/cyberriskcanvas-pro` | The full product. Without a license key it behaves like the free tier; with a key from [cyberriskcanvas.com/pricing](https://cyberriskcanvas.com/de#pricing) (Settings → License) the Pro features unlock. | the private Pro repository |
 
-`docker-compose.yml` uses the core image. To run the Pro image, set `CRC_IMAGE=ghcr.io/cyberriskcanvas/cyberriskcanvas-app:latest` in `.env`; nothing else changes, your data stays.
+`docker-compose.yml` uses the core image. To run the Pro image, set `CRC_IMAGE=ghcr.io/cyberriskcanvas/cyberriskcanvas-pro:latest` in `.env`; nothing else changes, your data stays.
 
 ## Pro License
 

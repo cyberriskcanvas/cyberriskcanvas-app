@@ -1,0 +1,67 @@
+# Lint, type check, unit tests and the dependency audit. Called by CI and, in the private Pro repository, by Release,
+# so an image is never published from a commit that fails them.
+name: Checks
+
+on:
+  workflow_call:
+
+env:
+  NODE_VERSION: "26"
+
+jobs:
+  # ── 1. Lint & Type-check ──────────────────────────────────────────────────
+  lint:
+    name: Lint & Type-check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install Yarn
+        run: npm install -g yarn
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Generate Prisma client
+        run: yarn prisma:generate
+        env:
+          DATABASE_URL: postgresql://placeholder:placeholder@localhost:5432/placeholder
+
+      - name: ESLint
+        run: yarn eslint . --max-warnings 0
+
+      - name: TypeScript type-check
+        run: yarn typecheck
+
+      - name: Unit tests (Vitest)
+        run: yarn test
+
+  # ── 2. Security Audit ─────────────────────────────────────────────────────
+  audit:
+    name: Security Audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install Yarn
+        run: npm install -g yarn
+
+      - name: yarn audit (production dependencies)
+        run: |
+          code=0
+          yarn audit --groups dependencies --level critical || code=$?
+          if [ $((code & 16)) -ne 0 ]; then
+            echo "::error::Critical vulnerabilities found in production dependencies (exit code $code)"
+            exit 1
+          fi
+          echo "Audit passed (exit code $code - dev/moderate/low issues ignored)"

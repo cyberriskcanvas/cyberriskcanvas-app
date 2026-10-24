@@ -20,7 +20,7 @@ import { aggregateDiagram, countDrafts, hasTemplateThreats } from '@/utils/aggre
 import type { CraChecklist } from '@/lib/craChecklist';
 import { applyDismissals, checkModel } from '@/utils/modelCheck';
 import type { AnnexViiRow } from '@/utils/docGenerators';
-import { exportPdf } from '@/pro/ui';
+import { exportPdf, PRO_EDITION } from '@/pro/ui';
 import { SummaryCards } from '@/components/Dashboard/SummaryCards';
 import { RiskHeatmap } from '@/components/Dashboard/RiskHeatmap';
 import { ThreatsBreakdown } from '@/components/Dashboard/ThreatsBreakdown';
@@ -156,70 +156,74 @@ export default function DashboardClient({ diagramId, projectId, diagramName, ini
                     BSI &amp; CRA Exportformate
                   </div>
 
-                  <a
-                    href={`/api/projects/${projectId}/sbom/export?format=cyclonedx`}
-                    download
-                    onClick={() => setExportMenuOpen(false)}
-                    className="flex items-center gap-2.5 rounded-lg px-2.5 py-2 hover:bg-[#faf9f7] text-[#1a1917] transition-colors"
-                  >
-                    <Code size={14} className="text-indigo-600" />
-                    <div>
-                      <div className="font-semibold">BSI CycloneDX 1.6 SBOM</div>
-                      <div className="text-[10px] text-[#6b6460]">{pt.misc.export.bsiTax}</div>
-                    </div>
-                  </a>
+                  {PRO_EDITION && (
+                    <>
+                      <a
+                        href={`/api/projects/${projectId}/sbom/export?format=cyclonedx`}
+                        download
+                        onClick={() => setExportMenuOpen(false)}
+                        className="flex items-center gap-2.5 rounded-lg px-2.5 py-2 hover:bg-[#faf9f7] text-[#1a1917] transition-colors"
+                      >
+                        <Code size={14} className="text-indigo-600" />
+                        <div>
+                          <div className="font-semibold">BSI CycloneDX 1.6 SBOM</div>
+                          <div className="text-[10px] text-[#6b6460]">{pt.misc.export.bsiTax}</div>
+                        </div>
+                      </a>
 
-                  <a
-                    href={`/api/projects/${projectId}/sbom/export?format=spdx`}
-                    download
-                    onClick={() => setExportMenuOpen(false)}
-                    className="flex items-center gap-2.5 rounded-lg px-2.5 py-2 hover:bg-[#faf9f7] text-[#1a1917] transition-colors"
-                  >
-                    <Code size={14} className="text-cyan-600" />
-                    <div>
-                      <div className="font-semibold">BSI SPDX 3.0.1 SBOM</div>
-                      <div className="text-[10px] text-[#6b6460]">SPDX 3.0 JSON-LD Standard</div>
-                    </div>
-                  </a>
+                      <a
+                        href={`/api/projects/${projectId}/sbom/export?format=spdx`}
+                        download
+                        onClick={() => setExportMenuOpen(false)}
+                        className="flex items-center gap-2.5 rounded-lg px-2.5 py-2 hover:bg-[#faf9f7] text-[#1a1917] transition-colors"
+                      >
+                        <Code size={14} className="text-cyan-600" />
+                        <div>
+                          <div className="font-semibold">BSI SPDX 3.0.1 SBOM</div>
+                          <div className="text-[10px] text-[#6b6460]">SPDX 3.0 JSON-LD Standard</div>
+                        </div>
+                      </a>
 
-                  <a
-                    href={`/api/projects/${projectId}/soa?format=csv`}
-                    download
-                    onClick={() => setExportMenuOpen(false)}
-                    className="flex items-center gap-2.5 rounded-lg px-2.5 py-2 hover:bg-[#faf9f7] text-[#1a1917] transition-colors"
-                  >
-                    <FileSpreadsheet size={14} className="text-green-600" />
-                    <div>
-                      <div className="font-semibold">CRA Statement of Applicability (SoA)</div>
-                      <div className="text-[10px] text-[#6b6460]">{pt.misc.export.csv}</div>
-                    </div>
-                  </a>
+                      <a
+                        href={`/api/projects/${projectId}/soa?format=csv`}
+                        download
+                        onClick={() => setExportMenuOpen(false)}
+                        className="flex items-center gap-2.5 rounded-lg px-2.5 py-2 hover:bg-[#faf9f7] text-[#1a1917] transition-colors"
+                      >
+                        <FileSpreadsheet size={14} className="text-green-600" />
+                        <div>
+                          <div className="font-semibold">CRA Statement of Applicability (SoA)</div>
+                          <div className="text-[10px] text-[#6b6460]">{pt.misc.export.csv}</div>
+                        </div>
+                      </a>
 
-                  <a
-                    href={`/api/projects/${projectId}/soa?format=md`}
-                    download
-                    onClick={() => setExportMenuOpen(false)}
-                    className="flex items-center gap-2.5 rounded-lg px-2.5 py-2 hover:bg-[#faf9f7] text-[#1a1917] transition-colors"
-                  >
-                    <FileText size={14} className="text-amber-600" />
-                    <div>
-                      <div className="font-semibold">CRA SoA Bericht (Markdown)</div>
-                      <div className="text-[10px] text-[#6b6460]">{pt.misc.export.md}</div>
-                    </div>
-                  </a>
+                      <a
+                        href={`/api/projects/${projectId}/soa?format=md`}
+                        download
+                        onClick={() => setExportMenuOpen(false)}
+                        className="flex items-center gap-2.5 rounded-lg px-2.5 py-2 hover:bg-[#faf9f7] text-[#1a1917] transition-colors"
+                      >
+                        <FileText size={14} className="text-amber-600" />
+                        <div>
+                          <div className="font-semibold">CRA SoA Bericht (Markdown)</div>
+                          <div className="text-[10px] text-[#6b6460]">{pt.misc.export.md}</div>
+                        </div>
+                      </a>
 
-                  <a
-                    href={`/api/projects/${projectId}/oscal`}
-                    download
-                    onClick={() => setExportMenuOpen(false)}
-                    className="flex items-center gap-2.5 rounded-lg px-2.5 py-2 hover:bg-[#faf9f7] text-[#1a1917] transition-colors"
-                  >
-                    <Sparkles size={14} className="text-purple-600" />
-                    <div>
-                      <div className="font-semibold">NIST OSCAL v1.1.0 JSON</div>
-                      <div className="text-[10px] text-[#6b6460]">{pt.misc.export.oscal}</div>
-                    </div>
-                  </a>
+                      <a
+                        href={`/api/projects/${projectId}/oscal`}
+                        download
+                        onClick={() => setExportMenuOpen(false)}
+                        className="flex items-center gap-2.5 rounded-lg px-2.5 py-2 hover:bg-[#faf9f7] text-[#1a1917] transition-colors"
+                      >
+                        <Sparkles size={14} className="text-purple-600" />
+                        <div>
+                          <div className="font-semibold">NIST OSCAL v1.1.0 JSON</div>
+                          <div className="text-[10px] text-[#6b6460]">{pt.misc.export.oscal}</div>
+                        </div>
+                      </a>
+                    </>
+                  )}
 
                   <button
                     onClick={() => {

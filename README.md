@@ -2,7 +2,7 @@
 
 Open-source cybersecurity engineering platform for product security teams - threat analysis & risk assessment (TARA), SBOM/vulnerability management, and compliance documentation under **IEC 62443**, **EU CRA**, and **NIS-2**. STRIDE-based threat modeling, zone/conduit mapping, and OSV.dev-backed vulnerability triage for automotive, industrial automation (OT/SCADA), and IoT teams. Self-hosted and collaborative: your data never leaves your infrastructure.
 
-> **Open Core** - The full TARA workflow is free and open source. [Pro features](#pro-license) are available with a license key. The Pro modules are not part of this repository; the official Docker image (`ghcr.io/cyberriskcanvas/cyberriskcanvas-app`) contains them and unlocks them with the key.
+> **Open Core** - The full TARA workflow is free and open source. [Pro features](#pro-license) are available with a license key. The Pro modules are not part of this repository, see [Docker images](#docker-images).
 
 ![CyberRisk Canvas demo - visual architecture canvas with STRIDE threat classification and IEC 62443 zone/conduit mapping](docs/demo.gif)
 
@@ -293,6 +293,15 @@ Register the redirect URI with your identity provider:
 - Email/password sign-in keeps working alongside SSO - existing accounts are unaffected.
 
 ---
+
+## Docker images
+
+| Image | Contains | Built from |
+|---|---|---|
+| `ghcr.io/cyberriskcanvas/cyberriskcanvas-core` | The open-source core edition: everything in this repository. Pro features show a hint instead. | this repository, on every push to `main` |
+| `ghcr.io/cyberriskcanvas/cyberriskcanvas-app` | The full product. Without a license key it behaves like the free tier; with a key from [cyberriskcanvas.com/pricing](https://cyberriskcanvas.com/de#pricing) (Settings → License) the Pro features unlock. | the private Pro repository |
+
+`docker-compose.yml` uses the core image. To run the Pro image, set `CRC_IMAGE=ghcr.io/cyberriskcanvas/cyberriskcanvas-app:latest` in `.env`; nothing else changes, your data stays.
 
 ## Pro License
 

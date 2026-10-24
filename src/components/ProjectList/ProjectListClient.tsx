@@ -20,6 +20,7 @@ import type { WizardAnswers } from '@/components/Wizard/generateDiagram';
 import type { Project } from '@/types';
 import { cn } from '@/utils/cn';
 import { formatDate } from '@/utils/format';
+import { PRO_EDITION } from '@/pro/ui';
 
 type ProjectWithMeta = Project & {
   _count?: { diagrams: number };
@@ -239,7 +240,7 @@ export default function ProjectListClient({ initialProjects, canViewSecurity }: 
             <button onClick={() => router.push('/organisation')} className={navBtnClass}>
               <Building2 size={15} /> <span className="hidden md:inline">{ptf.orgTitle}</span>
             </button>
-            {canViewSecurity && (
+            {canViewSecurity && PRO_EDITION && (
               <button onClick={() => router.push('/security')} className={navBtnClass}>
                 <ShieldAlert size={15} /> <span className="hidden md:inline">Security Overview</span>
               </button>

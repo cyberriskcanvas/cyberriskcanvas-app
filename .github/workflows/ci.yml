@@ -71,11 +71,30 @@ jobs:
           fi
           echo "Audit passed (exit code $code - dev/moderate/low issues ignored)"
 
-  # ── 3. Docker build (no push: release images come from the Pro repository) ─
+  # ── 3. Image: build, start it against a database and smoke-test it, then publish ──
+  # The public repository publishes the core edition (ghcr.io/cyberriskcanvas/cyberriskcanvas-core);
+  # in the private Pro repository this job only checks, the image is published by release.yml.
   docker:
-    name: Docker build
+    name: Docker image
     runs-on: ubuntu-latest
     needs: [lint, audit]
+    permissions:
+      contents: read
+      packages: write
+    env:
+      EDITION: ${{ github.repository == 'cyberriskcanvas/cyberriskcanvas-pro' && 'pro' || 'core' }}
+      IMAGE: ghcr.io/cyberriskcanvas/cyberriskcanvas-core
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/crc
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: crc
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d crc" --health-interval 5s --health-timeout 5s --health-retries 10
 
     steps:
       - uses: actions/checkout@v6
@@ -88,4 +107,59 @@ jobs:
         with:
           context: .
           file: ./Dockerfile
-          push: false
+          load: true
+          tags: crc:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Start the image
+        run: |
+          docker run -d --name crc --network host \
+            -e DATABASE_URL -e AUTH_SECRET=smoke -e AUTH_TRUST_HOST=true \
+            -e ADMIN_EMAIL=smoke@example.com -e ADMIN_PASSWORD=Smoke-test-1 -e CVE_SCAN_INTERVAL_HOURS=0 \
+            crc:ci
+          for i in $(seq 1 90); do curl -sf -o /dev/null http://localhost:3000/login && exit 0; sleep 2; done
+          docker logs crc
+          exit 1
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Smoke test (${{ env.EDITION }} edition)
+        run: |
+          npm install -g yarn && yarn install --frozen-lockfile --ignore-scripts
+          node scripts/smoke.mjs "$EDITION"
+
+      - name: Container log on failure
+        if: failure()
+        run: docker logs crc
+
+      - name: Log in to GitHub Container Registry
+        if: github.event_name == 'push' && github.repository == 'cyberriskcanvas/cyberriskcanvas-app'
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract Docker metadata
+        if: github.event_name == 'push' && github.repository == 'cyberriskcanvas/cyberriskcanvas-app'
+        id: meta
+        uses: docker/metadata-action@v6
+        with:
+          images: ${{ env.IMAGE }}
+          tags: |
+            type=sha,prefix=sha-,format=short
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+
+      - name: Publish the core image
+        if: github.event_name == 'push' && github.repository == 'cyberriskcanvas/cyberriskcanvas-app'
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha

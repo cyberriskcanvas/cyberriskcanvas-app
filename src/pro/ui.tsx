@@ -64,3 +64,5 @@ export function AssessmentPanel({ onClose }: { projectId: string; productName: s
 export async function exportPdf(..._args: [string, DiagramSummary, ...unknown[]]): Promise<void> {
   window.open(PRO_URL, '_blank');
 }
+
+export const PRO_EDITION = false;

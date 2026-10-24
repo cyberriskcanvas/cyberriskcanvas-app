@@ -12,6 +12,8 @@ interface DiagramStore {
   selectedNodeId: string | null;
   selectedEdgeId: string | null;
   isDetailPanelOpen: boolean;
+  /** One-shot request for the detail panel to open a specific tab (set by the task view). */
+  detailTab: string | null;
 
   setDiagramId: (id: string) => void;
   setNodes: (nodes: DiagramNode[]) => void;
@@ -39,6 +41,8 @@ interface DiagramStore {
   selectNode: (id: string | null) => void;
   selectEdge: (id: string | null) => void;
   closeDetailPanel: () => void;
+  openNodeTab: (id: string, tab: string) => void;
+  clearDetailTab: () => void;
 }
 
 export const useDiagramStore = create<DiagramStore>((set) => ({
@@ -49,6 +53,7 @@ export const useDiagramStore = create<DiagramStore>((set) => ({
   collaborators: new Map(),
   cursors: new Map(),
   selectedNodeId: null,
+  detailTab: null,
   selectedEdgeId: null,
   isDetailPanelOpen: false,
 
@@ -193,5 +198,7 @@ export const useDiagramStore = create<DiagramStore>((set) => ({
 
   selectNode: (id) => set({ selectedNodeId: id, selectedEdgeId: null, isDetailPanelOpen: id !== null }),
   selectEdge: (id) => set({ selectedEdgeId: id, selectedNodeId: null, isDetailPanelOpen: id !== null }),
+  openNodeTab: (id, tab) => set({ selectedNodeId: id, selectedEdgeId: null, isDetailPanelOpen: true, detailTab: tab }),
+  clearDetailTab: () => set({ detailTab: null }),
   closeDetailPanel: () => set({ isDetailPanelOpen: false, selectedNodeId: null, selectedEdgeId: null }),
 }));

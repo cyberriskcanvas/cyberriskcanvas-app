@@ -27,6 +27,8 @@ export interface Asset {
   integrity?: 1 | 2 | 3 | 4 | 5;
   availability?: 1 | 2 | 3 | 4 | 5;
   amplifier?: number;
+  /** Drafted by the guided TARA and not yet confirmed by a person. */
+  draft?: boolean;
 }
 
 export interface Threat {
@@ -35,7 +37,9 @@ export interface Threat {
   stride: 'S' | 'T' | 'R' | 'I' | 'D' | 'E';
   cweId?: string;
   description?: string;
-  source?: 'manual' | 'sbom' | 'ai';
+  source?: 'manual' | 'sbom' | 'ai' | 'template' | 'rule';
+  /** Drafted by the guided TARA and not yet confirmed by a person. Never counts as done. */
+  draft?: boolean;
 }
 
 export type RiskLevel = 'critical' | 'high' | 'medium' | 'low' | 'negligible';
@@ -104,6 +108,8 @@ export interface SecurityTest {
   threatId?: string;
   requirementId?: string;
   source: 'auto' | 'manual';
+  /** When set, the status comes from the newest CI runs of this source instead of manual buttons. */
+  ciSource?: 'sbom' | 'sast' | 'secrets' | 'vulnscan' | 'dast' | 'tls' | 'ports';
 }
 
 // ─── Single flexible node data type ──────────────────────────────────────────
@@ -141,6 +147,10 @@ export interface NodeData extends Record<string, unknown> {
   measures?: Measure[];
   iecPart?: '4-2' | '3-3';
   securityTests?: SecurityTest[];
+  // Security facts for the architecture check (src/utils/modelCheck.ts); unset = not stated yet
+  exposure?: 'internet' | 'local-network' | 'physical' | 'none';
+  authentication?: 'none' | 'password' | 'mfa' | 'certificate';
+  personalData?: boolean;
 }
 
 // Narrowed views used in node components for convenience
@@ -229,33 +239,3 @@ export interface DragData {
   label: string;
 }
 
-// ─── SBOM ─────────────────────────────────────────────────────────────────────
-
-export interface SbomVulnerabilityData {
-  id: string;
-  osvId: string;
-  cveId?: string | null;
-  summary?: string | null;
-  severity?: string | null;
-  cvssScore?: number | null;
-  source: string;
-}
-
-export interface SbomComponentData {
-  id: string;
-  name: string;
-  version?: string | null;
-  purl?: string | null;
-  type?: string | null;
-  createdAt: string;
-  vulnerabilities: SbomVulnerabilityData[];
-}
-
-export interface SbomImportResult {
-  componentCount: number;
-  vulnCount: number;
-  criticalCount: number;
-  highCount: number;
-  threatsCreated: number;
-  components: SbomComponentData[];
-}

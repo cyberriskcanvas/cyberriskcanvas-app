@@ -1,5 +1,7 @@
+import { useModelCheckT } from '@/i18n/modelCheck';
 import { useState } from 'react';
 import { useDiagramStore } from '@/store/diagramStore';
+import { useProjectStore } from '@/store/projectStore';
 import type { NodeData, HardwareComponentType, SoftwareComponentType, BoundaryType } from '@/types';
 import { useT } from '@/hooks/useT';
 
@@ -30,11 +32,13 @@ interface Props {
 
 export function OverviewTab({ nodeId, data, nodeType }: Props) {
   const { updateNodeData } = useDiagramStore();
+  const iec62443 = useProjectStore((s) => s.iec62443);
   const [label, setLabel] = useState(String(data.label ?? ''));
   const [desc, setDesc] = useState(String(data.description ?? ''));
   const [version, setVersion] = useState(String(data.version ?? ''));
   const tr = useT();
   const ov = tr.overview;
+  const mc = useModelCheckT();
 
   const save = (partial: Partial<NodeData>) => updateNodeData(nodeId, partial);
 
@@ -105,7 +109,7 @@ export function OverviewTab({ nodeId, data, nodeType }: Props) {
 
       {nodeType !== 'boundary' && (
         <>
-          <Field label={ov.securityLevel}>
+          {iec62443 && <Field label={ov.securityLevel}>
             <select
               value={String(data.securityLevel ?? '')}
               onChange={(v) => save({ securityLevel: v.target.value as NodeData['securityLevel'] })}
@@ -116,9 +120,29 @@ export function OverviewTab({ nodeId, data, nodeType }: Props) {
                 <option key={sl} value={sl}>{sl}</option>
               ))}
             </select>
-          </Field>
+          </Field>}
 
-          <Field label={ov.iecPart}>
+          <div className="space-y-3 rounded-lg border border-[#e5e1d8] bg-[#faf9f7] p-3">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-[#6b6460]">{mc.facts.title}</p>
+            <Field label={mc.facts.exposure}>
+              <select value={String(data.exposure ?? '')} onChange={(v) => save({ exposure: (v.target.value || undefined) as NodeData['exposure'] })} className={selectClass}>
+                <option value="">{mc.facts.notSet}</option>
+                {(Object.keys(mc.facts.exposureOptions) as Array<keyof typeof mc.facts.exposureOptions>).map((k) => <option key={k} value={k}>{mc.facts.exposureOptions[k]}</option>)}
+              </select>
+            </Field>
+            <Field label={mc.facts.authentication}>
+              <select value={String(data.authentication ?? '')} onChange={(v) => save({ authentication: (v.target.value || undefined) as NodeData['authentication'] })} className={selectClass}>
+                <option value="">{mc.facts.notSet}</option>
+                {(Object.keys(mc.facts.authenticationOptions) as Array<keyof typeof mc.facts.authenticationOptions>).map((k) => <option key={k} value={k}>{mc.facts.authenticationOptions[k]}</option>)}
+              </select>
+            </Field>
+            <label className="flex items-center gap-2 text-xs text-[#3d3a36]">
+              <input type="checkbox" checked={!!data.personalData} onChange={(e) => save({ personalData: e.target.checked || undefined })} />
+              {mc.facts.personalData}
+            </label>
+          </div>
+
+          {iec62443 && <Field label={ov.iecPart}>
             <select
               value={String(data.iecPart ?? '4-2')}
               onChange={(v) => save({ iecPart: v.target.value as '4-2' | '3-3' })}
@@ -128,7 +152,7 @@ export function OverviewTab({ nodeId, data, nodeType }: Props) {
                 <option key={p} value={p}>IEC 62443-{p}</option>
               ))}
             </select>
-          </Field>
+          </Field>}
         </>
       )}
     </div>

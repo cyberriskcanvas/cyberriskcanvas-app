@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useDiagramStore } from '@/store/diagramStore';
 import type { DiagramEdge } from '@/types';
 import { Shield, ShieldOff } from 'lucide-react';
+import { usePanelsT } from '@/i18n/panels';
 
 interface ProtocolDef {
   port: number;
@@ -54,6 +55,7 @@ interface Props {
 }
 
 export function EdgeOverviewTab({ edgeId, edge }: Props) {
+  const { t } = usePanelsT();
   const { updateEdgeData } = useDiagramStore();
 
   const [protocol, setProtocol] = useState(String(edge.data?.protocol ?? 'custom'));
@@ -122,13 +124,13 @@ export function EdgeOverviewTab({ edgeId, edge }: Props) {
 
   return (
     <div className="space-y-4 p-4">
-      <Field label="Protokoll">
+      <Field label={t.edge.protocol}>
         <select
           value={protocol}
           onChange={(e) => handleProtocolChange(e.target.value)}
           className={selectClass}
         >
-          <option value="custom">- Freitext -</option>
+          <option value="custom">{t.edge.freeText}</option>
           <optgroup label="IoT / M2M">
             <option value="MQTT">MQTT</option>
             <option value="MQTT/TLS">MQTT/TLS</option>
@@ -161,18 +163,18 @@ export function EdgeOverviewTab({ edgeId, edge }: Props) {
 
       {!isCustom && (
         <>
-          <Field label="Port">
+          <Field label={t.edge.port}>
             <input
               type="number"
               value={port}
               onChange={(e) => handlePortChange(e.target.value)}
               onBlur={save}
-              placeholder="automatisch"
+              placeholder={t.edge.auto}
               className={inputClass}
             />
           </Field>
 
-          <Field label="Verschlüsselung">
+          <Field label={t.edge.encryption}>
             <button
               type="button"
               onClick={handleEncryptedToggle}
@@ -183,27 +185,27 @@ export function EdgeOverviewTab({ edgeId, edge }: Props) {
               }`}
             >
               {encrypted ? <Shield size={14} /> : <ShieldOff size={14} />}
-              {encrypted ? 'Verschlüsselt (TLS)' : 'Unverschlüsselt'}
+              {encrypted ? t.edge.encrypted : t.edge.unencrypted}
             </button>
           </Field>
         </>
       )}
 
-      <Field label={isCustom ? 'Beschriftung' : 'Beschriftung (Vorschau)'}>
+      <Field label={isCustom ? t.edge.label : t.edge.labelPreview}>
         <input
           value={isCustom ? customLabel : buildLabel(protocol, port, encrypted)}
           onChange={isCustom ? (e) => setCustomLabel(e.target.value) : undefined}
           readOnly={!isCustom}
-          placeholder="z.B. MQTT/TLS (Port 8883)"
+          placeholder={t.edge.labelPh}
           className={`${inputClass} ${!isCustom ? 'bg-[#faf9f7] text-[#6b6460]' : ''}`}
         />
       </Field>
 
-      <Field label="Beschreibung">
+      <Field label={t.edge.description}>
         <textarea
           value={description}
           onChange={(e) => setDescription(e.target.value)}
-          placeholder="Zweck dieser Verbindung…"
+          placeholder={t.edge.descriptionPh}
           rows={3}
           className="w-full rounded-lg border border-[#e5e1d8] bg-white px-3 py-1.5 text-sm text-[#1a1917] placeholder-[#c8c0b0] focus:border-[#1e293b] focus:outline-none resize-none"
         />
@@ -213,7 +215,7 @@ export function EdgeOverviewTab({ edgeId, edge }: Props) {
         onClick={save}
         className="w-full rounded-lg bg-[#1e293b] px-3 py-1.5 text-sm font-medium text-white hover:bg-[#0f172a] transition-colors"
       >
-        Übernehmen
+        {t.edge.apply}
       </button>
     </div>
   );

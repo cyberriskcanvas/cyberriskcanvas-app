@@ -57,15 +57,36 @@ export async function authenticateRequest(req: NextRequest): Promise<AuthResult 
 }
 
 /**
+ * Authenticates a pipeline request via Bearer CI token (`crci_…`).
+ * Unlike authenticateRequest it never accepts sessions or user API keys, and the
+ * result is bound to a single project.
+ */
+export async function authenticateCiToken(req: NextRequest): Promise<{ projectId: string; tokenId: string } | null> {
+  const authHeader = req.headers.get('authorization');
+  if (!authHeader?.startsWith('Bearer ')) return null;
+  const rawKey = authHeader.slice(7).trim();
+  if (!rawKey.startsWith('crci_')) return null;
+
+  const token = await prisma.ciToken.findUnique({
+    where: { keyHash: createHash('sha256').update(rawKey).digest('hex') },
+    select: { id: true, projectId: true },
+  });
+  if (!token) return null;
+
+  prisma.ciToken.update({ where: { id: token.id }, data: { lastUsedAt: new Date() } }).catch(() => { /* non-critical */ });
+  return { projectId: token.projectId, tokenId: token.id };
+}
+
+/**
  * Generates a new API key.
- * Format: crc_<64 hex chars>
+ * Format: <prefix><64 hex chars>, prefix `crc_` for user keys and `crci_` for CI tokens.
  * Returns the raw key (shown once) and the hash + prefix to store.
  */
-export function generateApiKey(): { raw: string; hash: string; prefix: string } {
+export function generateApiKey(keyPrefix: 'crc_' | 'crci_' = 'crc_'): { raw: string; hash: string; prefix: string } {
   const bytes = new Uint8Array(32);
   crypto.getRandomValues(bytes);
   const hex = Array.from(bytes).map((b) => b.toString(16).padStart(2, '0')).join('');
-  const raw = `crc_${hex}`;
+  const raw = `${keyPrefix}${hex}`;
   const hash = createHash('sha256').update(raw).digest('hex');
   const prefix = hex.slice(0, 8);
   return { raw, hash, prefix };

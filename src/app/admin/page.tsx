@@ -6,13 +6,13 @@ import { getLicenseInfo } from '@/lib/license';
 import { getLicenseKeyPreview } from '@/actions/license';
 import { getTier } from '@/lib/tierLimits';
 import { TIER_CONFIG } from '@/lib/tierConfig';
-import { listAlertChannels } from '@/actions/alertChannels';
+import { listAlertChannels } from '@/pro/server';
 import { listAuditLog } from '@/actions/audit';
 import AdminClient from '@/components/Admin/AdminClient';
 import { prisma } from '@/lib/db';
 
 export const metadata: Metadata = {
-  title: 'Admin - CyberRisk Canvas',
+  title: 'Admin',
   robots: { index: false, follow: false },
 };
 

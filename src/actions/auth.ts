@@ -122,19 +122,12 @@ export async function updateUserProfile(data: {
   color?: string;
   companyName?: string;
   companyLogo?: string;
-  // CSAF publisher profile
-  csafPublisherName?: string;
-  csafPublisherNamespace?: string;
-  csafPublisherCategory?: string;
-  csafIssuingAuthority?: string;
-  csafContactDetails?: string;
 }) {
   const session = await requireSession();
   if (data.companyLogo) {
     await requireTierFeature('whiteLabel');
     validateCompanyLogo(data.companyLogo);
   }
-  const VALID_CATEGORIES = ['vendor', 'coordinator', 'discoverer', 'other'];
   return prisma.user.update({
     where: { id: session.user.id },
     data: {
@@ -142,11 +135,6 @@ export async function updateUserProfile(data: {
       color: data.color,
       companyName: data.companyName?.trim(),
       companyLogo: data.companyLogo,
-      ...(data.csafPublisherName !== undefined && { csafPublisherName: data.csafPublisherName.trim().slice(0, 256) || null }),
-      ...(data.csafPublisherNamespace !== undefined && { csafPublisherNamespace: data.csafPublisherNamespace.trim().slice(0, 512) || null }),
-      ...(data.csafPublisherCategory && VALID_CATEGORIES.includes(data.csafPublisherCategory) && { csafPublisherCategory: data.csafPublisherCategory }),
-      ...(data.csafIssuingAuthority !== undefined && { csafIssuingAuthority: data.csafIssuingAuthority.trim().slice(0, 512) || null }),
-      ...(data.csafContactDetails !== undefined && { csafContactDetails: data.csafContactDetails.trim().slice(0, 1024) || null }),
     },
   });
 }

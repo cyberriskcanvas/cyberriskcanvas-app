@@ -110,7 +110,7 @@ Wir versichern gemäß BSI TR-03183-3 §4.4.4:
 ## 4. Offenlegungsfrist (Disclosure Timeline)
 - **Reguläre Offenlegungsfrist:** **90 Tage** nach Eingang der validierten Meldung.
 - **Fristverlängerung:** In begründeten Ausnahmefällen um maximal weitere 90 Tage in Abstimmung mit dem zuständigen nationalen CSIRT (CERT-Bund).
-- **Veröffentlichung:** Bereitstellung strukturierter Security Advisories im Format **CSAF 2.0** und Weiterleitung an die European Vulnerability Database (EUVD / ENISA).
+- **Veröffentlichung:** Bereitstellung strukturierter Security Advisories im Format **CSAF** (2.0, künftig 2.1) und Weiterleitung an die European Vulnerability Database (EUVD / ENISA).
 
 ## 5. Kontaktmöglichkeiten
 - **PSIRT (Produktsicherheit):** \`${config.psirtEmail}\`

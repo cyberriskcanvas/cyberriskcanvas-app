@@ -27,9 +27,20 @@ export type AuditAction =
   | 'team.member_role_change'
   | 'api_key.create'
   | 'api_key.delete'
+  | 'ci_token.create'
+  | 'ci_token.delete'
+  | 'ci.ingest'
+  | 'assessment.start'
+  | 'assessment.decision'
   | 'document.upload'
   | 'document.delete'
   | 'evidence.delete'
+  | 'organisation.update'
+  | 'own_vulnerability.save'
+  | 'own_vulnerability.delete'
+  | 'policy.save'
+  | 'policy.delete'
+  | 'policy.waive'
   | 'version.freeze'
   | 'version.branch';
 
@@ -38,7 +49,7 @@ export interface AuditEntry {
   /** null for system events (e.g. bootstrap). */
   actorId?: string | null;
   actorEmail?: string | null;
-  targetType?: 'user' | 'license' | 'alert_channel' | 'team' | 'api_key' | 'document' | 'evidence' | 'project' | 'version';
+  targetType?: 'user' | 'license' | 'alert_channel' | 'team' | 'api_key' | 'ci_token' | 'ci_run' | 'assessment' | 'document' | 'evidence' | 'project' | 'version' | 'policy';
   targetId?: string;
   details?: Record<string, string | number | boolean | null>;
 }

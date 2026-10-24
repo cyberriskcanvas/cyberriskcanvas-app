@@ -2,8 +2,8 @@ import { useRef, useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
 import {
   Save, Upload, Trash2, Shield, Layers, BarChart2, Brain, History, LogOut, Route,
-  Lock, GitBranch, FileText, ChevronDown, User, ArrowLeft, Settings, StickyNote,
-} from 'lucide-react';
+  Lock, GitBranch, ChevronDown, User, ArrowLeft, Settings, StickyNote, ListChecks } from 'lucide-react';
+import { useModelCheckT } from '@/i18n/modelCheck';
 import { signOut } from 'next-auth/react';
 import { SubscriptionBadge } from '@/components/Subscription/SubscriptionBadge';
 import { AICreditCounter } from '@/components/Subscription/AICreditCounter';
@@ -27,11 +27,13 @@ interface ToolbarProps {
   onOpenAI: () => void;
   onOpenVersions: () => void;
   onOpenAttackPaths: () => void;
-  onOpenDocuments: () => void;
+  onOpenModelCheck: () => void;
   onOpenNotes: () => void;
+  /** Save, File and Analyse act on the canvas: only shown while the architecture tab is open. */
+  canvasTools: boolean;
   versionsOpen: boolean;
   attackPathsOpen: boolean;
-  documentsOpen: boolean;
+  modelCheckOpen: boolean;
   notesOpen: boolean;
   user?: { id: string; name: string; color: string; tier: string; companyLogo?: string; companyName?: string };
   onFreezeBaseline?: () => void;
@@ -159,11 +161,12 @@ export function Toolbar({
   onOpenAI,
   onOpenVersions,
   onOpenAttackPaths,
-  onOpenDocuments,
+  onOpenModelCheck,
   onOpenNotes,
+  canvasTools,
   versionsOpen,
   attackPathsOpen,
-  documentsOpen,
+  modelCheckOpen,
   notesOpen,
   user,
   onFreezeBaseline,
@@ -173,11 +176,14 @@ export function Toolbar({
   const isLocked = useProjectStore(selectIsLocked);
   const { lang, toggleLang } = useLanguageStore();
   const t = useT();
+  const mcT = useModelCheckT();
 
   const [fileOpen, setFileOpen] = useState(false);
   const [analyseOpen, setAnalyseOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
   const fileRef = useRef<HTMLDivElement>(null);
+  const iec62443 = useProjectStore((st) => st.iec62443);
+  const closeMenus = () => { setFileOpen(false); setAnalyseOpen(false); };
   const analyseRef = useRef<HTMLDivElement>(null);
   const accountRef = useRef<HTMLDivElement>(null);
 
@@ -255,6 +261,12 @@ export function Toolbar({
 
   const collabCount = collaborators.size;
 
+  const drawioItem = <DropdownItem onClick={() => { fileInputRef.current?.click(); closeMenus(); }} icon={<Upload size={14} />} label={t.toolbar.importDrawio} />;
+  const versionsItem = <DropdownItem onClick={() => { onOpenVersions(); closeMenus(); }} icon={<History size={14} />} label={t.toolbar.versionHistory} active={versionsOpen} />;
+  const clearItem = <DropdownItem onClick={() => { handleClearCanvas(); closeMenus(); }} icon={<Trash2 size={14} />} label={t.toolbar.clearCanvas} danger />;
+  const aiItem = <DropdownItem onClick={() => { if (aiGuard.allowed) onOpenAI(); else aiGuard.showPaywall(); closeMenus(); }} icon={<Brain size={14} />} label={t.toolbar.aiAnalysisLabel} indigo disabled comingSoon />;
+  const attackItem = <DropdownItem onClick={() => { if (attackGuard.allowed) onOpenAttackPaths(); else attackGuard.showPaywall(); closeMenus(); }} icon={<Route size={14} />} label={t.toolbar.attackPaths} active={attackPathsOpen} />;
+
   return (
     <header className="relative flex h-12 shrink-0 items-center justify-between border-b border-gray-800 bg-gray-900 px-3 gap-2">
       {/* Logo + diagram name */}
@@ -280,7 +292,7 @@ export function Toolbar({
 
       {/* Center actions */}
       <div className="flex items-center gap-0.5">
-        {!isLocked && (
+        {canvasTools && !isLocked && (
           <>
             <ToolbarBtn title={t.toolbar.save} onClick={handleSave} active={saving}>
               <Save size={16} className={saving ? 'animate-pulse' : ''} />
@@ -297,29 +309,15 @@ export function Toolbar({
               />
               {fileOpen && (
                 <div className="absolute left-0 top-full mt-1 w-52 rounded-xl border border-gray-800 bg-gray-900 py-1.5 shadow-lg z-50 px-1.5">
-                  <DropdownItem
-                    onClick={() => { fileInputRef.current?.click(); setFileOpen(false); }}
-                    icon={<Upload size={14} />}
-                    label={t.toolbar.importDrawio}
-                  />
+                  {drawioItem}
                   <DropdownItem
                     onClick={() => { onOpenTemplates(); setFileOpen(false); }}
                     icon={<Layers size={14} />}
                     label={t.toolbar.loadTemplate}
                   />
-                  <DropdownItem
-                    onClick={() => { onOpenVersions(); setFileOpen(false); }}
-                    icon={<History size={14} />}
-                    label={t.toolbar.versionHistory}
-                    active={versionsOpen}
-                  />
+                  {versionsItem}
                   <DropdownSeparator />
-                  <DropdownItem
-                    onClick={() => { handleClearCanvas(); setFileOpen(false); }}
-                    icon={<Trash2 size={14} />}
-                    label={t.toolbar.clearCanvas}
-                    danger
-                  />
+                  {clearItem}
                 </div>
               )}
             </div>
@@ -340,31 +338,13 @@ export function Toolbar({
               />
               {analyseOpen && (
                 <div className="absolute left-0 top-full mt-1 w-52 rounded-xl border border-gray-800 bg-gray-900 py-1.5 shadow-lg z-50 px-1.5">
+                  {aiItem}
+                  {attackItem}
                   <DropdownItem
-                    onClick={() => { if (aiGuard.allowed) onOpenAI(); else aiGuard.showPaywall(); setAnalyseOpen(false); }}
-                    icon={<Brain size={14} />}
-                    label={t.toolbar.aiAnalysisLabel}
-                    indigo
-                    disabled
-                    comingSoon
-                  />
-                  <DropdownItem
-                    onClick={() => { if (attackGuard.allowed) onOpenAttackPaths(); else attackGuard.showPaywall(); setAnalyseOpen(false); }}
-                    icon={<Route size={14} />}
-                    label={t.toolbar.attackPaths}
-                    active={attackPathsOpen}
-                  />
-                  <DropdownItem
-                    onClick={() => { onOpenDocuments(); setAnalyseOpen(false); }}
-                    icon={<FileText size={14} />}
-                    label={t.toolbar.documents}
-                    active={documentsOpen}
-                  />
-                  <DropdownItem
-                    onClick={() => { onOpenNotes(); setAnalyseOpen(false); }}
-                    icon={<StickyNote size={14} />}
-                    label="Notizen"
-                    active={notesOpen}
+                    onClick={() => { onOpenModelCheck(); setAnalyseOpen(false); }}
+                    icon={<ListChecks size={14} />}
+                    label={mcT.menu}
+                    active={modelCheckOpen}
                   />
                 </div>
               )}
@@ -389,7 +369,7 @@ export function Toolbar({
           </>
         )}
 
-        {isLocked && (
+        {canvasTools && isLocked && (
           <>
             <ToolbarBtn title={t.toolbar.versionHistory} onClick={onOpenVersions} active={versionsOpen}>
               <History size={16} />
@@ -402,11 +382,16 @@ export function Toolbar({
           href={`/diagram/${diagramId}/dashboard`}
           title={t.toolbar.dashboard}
           data-tour="export-btn"
-          className="flex h-8 items-center gap-1.5 rounded-lg px-2 text-xs font-medium text-[#6b6460] transition-colors hover:bg-[#f4f1ec] hover:text-[#1a1917]"
+          className="flex h-8 items-center gap-1.5 rounded-lg px-2 text-xs font-medium text-gray-300 transition-colors hover:bg-gray-800 hover:text-white"
         >
           <BarChart2 size={15} />
           <span className="hidden md:inline">{t.toolbar.dashboard}</span>
         </Link>
+
+        {/* Notes belong to the whole project: available in every tab */}
+        <ToolbarBtn title={t.toolbar.notes} onClick={onOpenNotes} active={notesOpen}>
+          <StickyNote size={16} />
+        </ToolbarBtn>
 
         <ToolbarDivider />
 
@@ -436,7 +421,7 @@ export function Toolbar({
         <SubscriptionBadge />
         <AICreditCounter />
 
-        {complianceScore !== null && (
+        {iec62443 && complianceScore !== null && (
           <div
             title={t.toolbar.complianceScore}
             className={cn(

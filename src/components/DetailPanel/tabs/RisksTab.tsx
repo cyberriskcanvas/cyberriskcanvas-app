@@ -1,5 +1,6 @@
 'use client';
 
+import { usePanelsT } from '@/i18n/panels';
 import { useState } from 'react';
 import { Plus, Trash2, Activity, Sparkles, Calculator, ShieldCheck, ChevronDown, ChevronUp } from 'lucide-react';
 import { useDiagramStore } from '@/store/diagramStore';
@@ -42,7 +43,7 @@ export function calcRiskLevel(likelihood: number, impact: number): RiskLevel {
   return 'negligible';
 }
 
-const LEVEL_COLORS: Record<RiskLevel, string> = {
+export const LEVEL_COLORS: Record<RiskLevel, string> = {
   critical: 'bg-red-100 text-red-800 border-red-300',
   high: 'bg-orange-100 text-orange-800 border-orange-300',
   medium: 'bg-yellow-100 text-yellow-800 border-yellow-300',
@@ -103,18 +104,26 @@ function RiskMatrix({ level }: { level: RiskLevel }) {
 interface Props {
   nodeId: string;
   data: NodeData;
+  /** Scoped to one threat (risk-flow card): its rating only, no threat picker, no examples. */
+  threatId?: string;
+  /** Prefilled likelihood and impact of a scoped rating. */
+  defaults?: { likelihood: Risk['likelihood']; impact: Risk['impact'] };
 }
 
-export function RisksTab({ nodeId, data }: Props) {
+export function RisksTab({ nodeId, data, threatId: scopedThreatId, defaults }: Props) {
+  const scoped = scopedThreatId !== undefined;
+  const { t: pt } = usePanelsT();
   const { updateNodeData } = useDiagramStore();
-  const risks = (data.risks ?? []) as Risk[];
+  const allRisks = (data.risks ?? []) as Risk[];
+  const risks = scoped ? allRisks.filter((r) => r.threatId === scopedThreatId) : allRisks;
   const threats = (data.threats ?? []) as Threat[];
   const assets = (data.assets ?? []) as Asset[];
   const t = useT();
 
-  const [threatId, setThreatId] = useState('');
-  const [likelihood, setLikelihood] = useState<Risk['likelihood']>(3);
-  const [impact, setImpact] = useState<Risk['impact']>(3);
+  const [pickedThreatId, setThreatId] = useState('');
+  const threatId = scoped ? scopedThreatId : pickedThreatId;
+  const [likelihood, setLikelihood] = useState<Risk['likelihood']>(defaults?.likelihood ?? 3);
+  const [impact, setImpact] = useState<Risk['impact']>(defaults?.impact ?? 3);
   const [mitigation, setMitigation] = useState('');
   const [acceptanceReason, setAcceptanceReason] = useState('');
 
@@ -136,7 +145,8 @@ export function RisksTab({ nodeId, data }: Props) {
 
   const preview = calcRiskLevel(likelihood, impact);
 
-  const save = (updated: Risk[]) => updateNodeData(nodeId, { risks: updated });
+  // a scoped tab only sees its own risks: write them back next to the others
+  const save = (updated: Risk[]) => updateNodeData(nodeId, { risks: scoped ? [...allRisks.filter((r) => r.threatId !== scopedThreatId), ...updated] : updated });
 
   const loadExamples = () => {
     const newThreats: Threat[] = EXAMPLE_ENTRIES.map((e) => ({ ...e.threat, id: crypto.randomUUID() }));
@@ -194,7 +204,7 @@ export function RisksTab({ nodeId, data }: Props) {
 
   return (
     <div className="flex flex-col gap-4 p-4">
-      {risks.length === 0 ? (
+      {risks.length === 0 ? (scoped ? null : (
         <div className="flex flex-col items-center gap-3 py-6 text-center text-[#c8c0b0]">
           <Activity size={28} />
           <p className="text-sm">{t.risks.noRisks}</p>
@@ -206,7 +216,7 @@ export function RisksTab({ nodeId, data }: Props) {
             {t.risks.loadExamples}
           </button>
         </div>
-      ) : (
+      )) : (
         <div className="space-y-2">
           {risks.map((r) => {
             const threat = threats.find((th) => th.id === r.threatId);
@@ -241,14 +251,14 @@ export function RisksTab({ nodeId, data }: Props) {
 
                     {r.bsiEnvironment && (
                       <p className="mt-1 text-[10px] text-[#6b6460] font-mono bg-white/60 rounded px-1.5 py-0.5 inline-block">
-                        Umgebung: {r.bsiEnvironment.interface} / {r.bsiEnvironment.access} / {r.bsiEnvironment.userCapability}
+                        {pt.bsi.env} {r.bsiEnvironment.interface} / {r.bsiEnvironment.access} / {r.bsiEnvironment.userCapability}
                       </p>
                     )}
 
                     {r.mitigation && <p className="mt-1 text-xs text-[#6b6460] line-clamp-2">{r.mitigation}</p>}
                     {r.acceptanceReason && (
                       <p className="mt-1 text-xs text-amber-800 italic bg-amber-50 rounded p-1.5 border border-amber-200">
-                        Begründung für Akzeptanz: {r.acceptanceReason}
+                        {pt.bsi.acceptReason} {r.acceptanceReason}
                       </p>
                     )}
 
@@ -271,7 +281,7 @@ export function RisksTab({ nodeId, data }: Props) {
                   <button
                     onClick={() => remove(r.id)}
                     className="text-[#6b6460] hover:text-red-600 shrink-0 p-1"
-                    title="Löschen"
+                    title={pt.bsi.del}
                   >
                     <Trash2 size={14} />
                   </button>
@@ -282,8 +292,8 @@ export function RisksTab({ nodeId, data }: Props) {
         </div>
       )}
 
-      {/* Add form */}
-      <div className="rounded-lg border border-[#e5e1d8] bg-[#faf9f7] p-3 space-y-3">
+      {/* Add form (a scoped threat has one rating) */}
+      {!(scoped && risks.length > 0) && <div className="rounded-lg border border-[#e5e1d8] bg-[#faf9f7] p-3 space-y-3">
         <div className="flex items-center justify-between">
           <p className="text-xs font-semibold text-[#1a1917] uppercase tracking-wide">{t.risks.addRiskEntry}</p>
           <button
@@ -302,14 +312,14 @@ export function RisksTab({ nodeId, data }: Props) {
           <div className="rounded-lg border border-indigo-200 bg-white p-3 space-y-2.5 shadow-xs">
             <div className="flex items-center gap-1.5 text-xs font-bold text-indigo-900">
               <ShieldCheck size={14} className="text-indigo-600" />
-              <span>BSI TR-03183-1 Umgebungsszenario (Likelihood &amp; Impact)</span>
+              <span>{pt.bsi.calcTitle}</span>
             </div>
             <p className="text-[10px] text-[#6b6460]">
-              Berechnet die Eintrittswahrscheinlichkeit objektiv anhand der Schnittstellen-, Zugangs- und Nutzerparameter.
+              {pt.bsi.calcIntro}
             </p>
 
             <div>
-              <label className="block text-[10px] font-bold text-[#6b6460] uppercase mb-0.5">Schnittstellenbeschränkung:</label>
+              <label className="block text-[10px] font-bold text-[#6b6460] uppercase mb-0.5">{pt.bsi.iface}</label>
               <select
                 value={iface}
                 onChange={(e) => setIface(e.target.value as BSIInterfaceRestriction)}
@@ -317,14 +327,14 @@ export function RisksTab({ nodeId, data }: Props) {
               >
                 {BSI_INTERFACE_OPTIONS.map((opt) => (
                   <option key={opt.value} value={opt.value}>
-                    {opt.label} (Faktor {opt.factor})
+                    {opt.label} ({pt.bsi.factor} {opt.factor})
                   </option>
                 ))}
               </select>
             </div>
 
             <div>
-              <label className="block text-[10px] font-bold text-[#6b6460] uppercase mb-0.5">Zugangsbeschränkung:</label>
+              <label className="block text-[10px] font-bold text-[#6b6460] uppercase mb-0.5">{pt.bsi.access}</label>
               <select
                 value={access}
                 onChange={(e) => setAccess(e.target.value as BSIAccessRestriction)}
@@ -332,14 +342,14 @@ export function RisksTab({ nodeId, data }: Props) {
               >
                 {BSI_ACCESS_OPTIONS.map((opt) => (
                   <option key={opt.value} value={opt.value}>
-                    {opt.label} (Faktor {opt.factor})
+                    {opt.label} ({pt.bsi.factor} {opt.factor})
                   </option>
                 ))}
               </select>
             </div>
 
             <div>
-              <label className="block text-[10px] font-bold text-[#6b6460] uppercase mb-0.5">Nutzerfähigkeiten:</label>
+              <label className="block text-[10px] font-bold text-[#6b6460] uppercase mb-0.5">{pt.bsi.user}</label>
               <select
                 value={userCap}
                 onChange={(e) => setUserCap(e.target.value as BSIUserCapability)}
@@ -347,7 +357,7 @@ export function RisksTab({ nodeId, data }: Props) {
               >
                 {BSI_USER_OPTIONS.map((opt) => (
                   <option key={opt.value} value={opt.value}>
-                    {opt.label} (Faktor {opt.factor})
+                    {opt.label} ({pt.bsi.factor} {opt.factor})
                   </option>
                 ))}
               </select>
@@ -358,13 +368,13 @@ export function RisksTab({ nodeId, data }: Props) {
               onClick={applyBsiCalculator}
               className="w-full rounded bg-indigo-600 py-1.5 text-xs font-semibold text-white hover:bg-indigo-700 transition-colors"
             >
-              Werte berechnen &amp; übernehmen (L={calculateBSILikelihood(iface, access, userCap)}
+              {pt.bsi.apply} (L={calculateBSILikelihood(iface, access, userCap)}
               {assets.length > 0 ? `, I=${maxAssetImpact}` : ''})
             </button>
           </div>
         )}
 
-        {threats.length > 0 && (
+        {!scoped && threats.length > 0 && (
           <div>
             <label className="block text-[10px] font-bold text-[#6b6460] uppercase mb-1">{t.risks.linkToThreat}:</label>
             <select value={threatId} onChange={(e) => setThreatId(e.target.value)} className={inputClass}>
@@ -411,16 +421,16 @@ export function RisksTab({ nodeId, data }: Props) {
 
         <div className="flex items-center justify-between gap-3 bg-white p-2.5 rounded-lg border border-[#e5e1d8]">
           <div className="flex flex-col">
-            <span className="text-[10px] text-[#6b6460] uppercase font-bold">Risikobewertung:</span>
+            <span className="text-[10px] text-[#6b6460] uppercase font-bold">{pt.bsi.rating}</span>
             <span className={cn('rounded px-2 py-0.5 text-xs font-bold border mt-1 w-fit', LEVEL_COLORS[preview])}>
-              {preview.toUpperCase()} (Score: {likelihood * impact})
+              {preview.toUpperCase()} ({pt.bsi.score}: {likelihood * impact})
             </span>
           </div>
-          <RiskMatrix level={preview} />
+          {!scoped && <RiskMatrix level={preview} />}
         </div>
 
         <div>
-          <label className="block text-[10px] font-bold text-[#6b6460] uppercase mb-1">Minderungsmaßnahme (Mitigation):</label>
+          <label className="block text-[10px] font-bold text-[#6b6460] uppercase mb-1">{pt.bsi.mitigation}</label>
           <input
             value={mitigation}
             onChange={(e) => setMitigation(e.target.value)}
@@ -432,12 +442,12 @@ export function RisksTab({ nodeId, data }: Props) {
         {preview !== 'low' && preview !== 'negligible' && (
           <div>
             <label className="block text-[10px] font-bold text-amber-800 uppercase mb-1">
-              Begründung falls Restrisiko akzeptiert wird (BSI TR-03183-1 §5.14.3):
+              {pt.bsi.acceptIf}
             </label>
             <input
               value={acceptanceReason}
               onChange={(e) => setAcceptanceReason(e.target.value)}
-              placeholder="z.B. Kompensierende Maßnahme im Netzwerk des Betreibers vorhanden"
+              placeholder={pt.bsi.acceptPh}
               className={inputClass}
             />
           </div>
@@ -449,7 +459,7 @@ export function RisksTab({ nodeId, data }: Props) {
         >
           <Plus size={12} /> {t.risks.addRisk}
         </button>
-      </div>
+      </div>}
     </div>
   );
 }

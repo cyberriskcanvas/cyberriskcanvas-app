@@ -34,6 +34,7 @@ services:
       - '${PORT:-3000}:3000'
     volumes:
       - documents_data:/data/documents
+      - evidence_data:/data/evidence
     environment:
       # ── Database ────────────────────────────────────────────────────────────
       DATABASE_URL: postgresql://cyberrisk:${POSTGRES_PASSWORD}@db:5432/cyberrisk
@@ -53,6 +54,15 @@ services:
       # ── Redis ────────────────────────────────────────────────────────────────
       REDIS_URL: redis://redis:6379
 
+      # ── Vulnerability monitoring (OSV re-scan of all SBOMs; Pro). 0 disables it.
+      CVE_SCAN_INTERVAL_HOURS: ${CVE_SCAN_INTERVAL_HOURS:-24}
+
+      # ── Optional email notifications (deadline reminders, serious findings, actively exploited)
+      SMTP_URL: ${SMTP_URL:-}
+      MAIL_FROM: ${MAIL_FROM:-}
+      ALERT_EMAIL_TO: ${ALERT_EMAIL_TO:-}
+      ALERT_EMAIL_MIN_SEVERITY: ${ALERT_EMAIL_MIN_SEVERITY:-HIGH}
+
       # ── Telemetry ────────────────────────────────────────────────────────────
       NEXT_TELEMETRY_DISABLED: '1'
     depends_on:
@@ -63,7 +73,8 @@ services:
     networks:
       - internal
 
-  # Optional periodic CVE re-scan. Disabled by default - enable with:
+  # Vulnerability monitoring now runs inside the app by default (every CVE_SCAN_INTERVAL_HOURS, 24 h;
+  # 0 turns it off). This container is an OPTIONAL external trigger, e.g. for a different schedule:
   #   CVE_SCAN_SECRET=... docker compose --profile cve-scan up -d
   # (set CVE_SCAN_SECRET in your .env; must match the value the `app`
   # service uses, see .env.example).
@@ -102,3 +113,4 @@ networks:
 volumes:
   postgres_data:
   documents_data:
+  evidence_data:

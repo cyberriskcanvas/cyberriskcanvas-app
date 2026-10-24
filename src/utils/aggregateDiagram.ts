@@ -67,10 +67,11 @@ export function aggregateDiagram(nodes: DiagramNode[]): DiagramSummary {
 
     components.push({ id: node.id, label, type, data });
 
-    for (const a of (data.assets ?? []) as Asset[]) {
+    // Draft items of the guided TARA are not part of the assessment until a person confirmed them
+    for (const a of ((data.assets ?? []) as Asset[]).filter((x) => !x.draft)) {
       assets.push({ ...a, componentId: node.id, componentLabel: label, componentType: type });
     }
-    for (const t of (data.threats ?? []) as Threat[]) {
+    for (const t of ((data.threats ?? []) as Threat[]).filter((x) => !x.draft)) {
       threats.push({ ...t, componentId: node.id, componentLabel: label, componentType: type });
     }
     for (const r of (data.risks ?? []) as Risk[]) {
@@ -139,4 +140,20 @@ export function aggregateDiagram(nodes: DiagramNode[]): DiagramSummary {
   });
 
   return { components, assets, threats, risks, measures, traceabilityRows, compliance, globalScore, craCompliance, craGlobalScore, riskCounts, measureCounts };
+}
+
+/** True when any threat came from the wizard's template draft (the PDF then names the method). */
+export function hasTemplateThreats(nodes: DiagramNode[]): boolean {
+  return nodes.some((n) => ((n.data?.threats ?? []) as Threat[]).some((t) => t.source === 'template'));
+}
+
+/** Number of guided-TARA suggestions nobody confirmed yet. */
+export function countDrafts(nodes: DiagramNode[]): { threats: number; assets: number } {
+  let threats = 0;
+  let assets = 0;
+  for (const node of nodes) {
+    threats += ((node.data?.threats ?? []) as Threat[]).filter((t) => t.draft).length;
+    assets += ((node.data?.assets ?? []) as Asset[]).filter((a) => a.draft).length;
+  }
+  return { threats, assets };
 }

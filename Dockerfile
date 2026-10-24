@@ -36,8 +36,12 @@ COPY . .
 RUN yarn prisma:generate
 RUN yarn build
 
-# Delete Next.js build cache to avoid copying GBs into the final runner image
-RUN rm -rf .next/cache
+# The custom server (server.ts and everything it imports) as one minified file, so the image carries no sources
+RUN node_modules/.bin/esbuild server.ts --bundle --platform=node --format=esm --target=node22 \
+      --packages=external --minify --legal-comments=none --outfile=dist/server.mjs
+
+# Build cache (GBs) and source maps (they embed the original sources) stay out of the runner image
+RUN rm -rf .next/cache && find .next -name '*.map' -delete
 
 # ── Stage 3: Production runner ────────────────────────────────────────────────
 FROM node:${NODE_VERSION} AS runner
@@ -47,18 +51,17 @@ RUN apk add --no-cache openssl libc6-compat && \
     npm install -g yarn && \
     npm cache clean --force
 
+# Pre-create data dirs owned by the runtime user so fresh named volumes are writable
+RUN mkdir -p /data/documents /data/evidence && chown -R node:node /data
+
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 
 COPY --from=builder --chown=node:node /app/.next ./.next
 COPY --from=dependencies --chown=node:node /app/node_modules ./node_modules
-COPY --from=builder --chown=node:node /app/src/generated ./src/generated
+COPY --from=builder --chown=node:node /app/dist ./dist
 COPY --chown=node:node public ./public
 COPY --chown=node:node server-prelude.cjs ./server-prelude.cjs
-COPY --chown=node:node server.ts ./server.ts
-COPY --chown=node:node tsconfig.json ./tsconfig.json
-COPY --chown=node:node src/websocket ./src/websocket
-COPY --chown=node:node src/lib ./src/lib
 COPY --chown=node:node package.json ./
 COPY --chown=node:node prisma ./prisma
 COPY --chown=node:node prisma.config.ts ./
@@ -68,4 +71,5 @@ EXPOSE 3000
 
 # On startup: run DB migrations, then start the app.
 # The app server bootstraps the first admin user automatically (via ADMIN_EMAIL + ADMIN_PASSWORD).
-CMD ["sh", "-c", "yarn prisma:migrate-deploy && yarn start"]
+# tsx only as loader: it resolves the extensionless imports inside next-auth; there is no TypeScript left to compile.
+CMD ["sh", "-c", "yarn prisma:migrate-deploy && node --require ./server-prelude.cjs --import tsx dist/server.mjs"]

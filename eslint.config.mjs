@@ -2,7 +2,7 @@ import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
   // Ignore build artefacts
-  { ignores: ['.next/**', 'node_modules/**', 'public/**'] },
+  { ignores: ['.next/**', 'node_modules/**', 'public/**', 'dist/**'] },
 
   // Base TypeScript rules (recommended + type-checked)
   ...tseslint.configs.recommended,
@@ -27,7 +27,7 @@ export default tseslint.config(
   // files and server.ts (excluded from the tsconfig project) fall back to
   // the project-less parser from the recommended config above.
   {
-    ignores: ['eslint.config.mjs', 'postcss.config.cjs', 'server-prelude.cjs', 'server.ts'],
+    ignores: ['eslint.config.mjs', 'postcss.config.cjs', 'server-prelude.cjs', 'server.ts', 'scripts/**/*.mjs'],
     languageOptions: {
       parserOptions: {
         project: true,

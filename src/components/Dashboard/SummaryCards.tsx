@@ -33,25 +33,25 @@ function Card({ label, tooltip, value, sub, icon: Icon, color }: CardProps) {
   );
 }
 
-export function SummaryCards({ summary }: { summary: DiagramSummary }) {
+export function SummaryCards({ summary, iec62443 }: { summary: DiagramSummary; iec62443: boolean }) {
   const openMeasures = summary.measureCounts['open'] ?? 0;
   const critHigh = (summary.riskCounts['critical'] ?? 0) + (summary.riskCounts['high'] ?? 0);
 
   return (
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">
+    <div className={`grid grid-cols-2 gap-3 sm:grid-cols-3 ${iec62443 ? 'xl:grid-cols-6' : 'xl:grid-cols-5'}`}>
       <Card label="Components" tooltip="All hardware and software elements you have added to your system." value={summary.components.length} icon={Cpu} color="bg-blue-600" />
       <Card label="Assets" tooltip="What you want to protect: e.g. data, control functions, or availability." value={summary.assets.length} icon={Database} color="bg-indigo-600" />
       <Card label="Threats" tooltip="Potential attacks or failures that could compromise your system (e.g. eavesdropping, tampering)." value={summary.threats.length} icon={AlertTriangle} color="bg-orange-600" />
       <Card label="Risks" tooltip="Assessed combinations of threat and potential impact - shows how serious a vulnerability is." value={summary.risks.length} sub={critHigh > 0 ? `${critHigh} critical/high` : undefined} icon={Activity} color={critHigh > 0 ? 'bg-red-600' : 'bg-yellow-600'} />
       <Card label="Measures" tooltip="Security measures that reduce or eliminate identified risks." value={summary.measures.length} sub={openMeasures > 0 ? `${openMeasures} open` : 'all captured'} icon={CheckSquare} color="bg-green-600" />
-      <Card
+      {iec62443 && <Card
         label="Standard Coverage"
         tooltip="How many IEC 62443 requirements you have marked as fulfilled for your system."
         value={summary.globalScore !== null ? `${summary.globalScore}%` : '-'}
         sub={summary.compliance.length > 0 ? `across ${summary.compliance.length} components` : 'No SL set'}
         icon={ShieldCheck}
         color={summary.globalScore === null ? 'bg-gray-400' : summary.globalScore >= 80 ? 'bg-green-600' : summary.globalScore >= 50 ? 'bg-yellow-600' : 'bg-red-600'}
-      />
+      />}
     </div>
   );
 }

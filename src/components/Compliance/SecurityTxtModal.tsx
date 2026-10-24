@@ -5,6 +5,7 @@ import { X, Copy, Check, Download, Shield } from 'lucide-react';
 import { generateBsiSecurityTxt, generateBsiCvdPolicy, type SecurityTxtConfig } from '@/data/securityTxt';
 import { cn } from '@/utils/cn';
 import { copyText } from '@/lib/insecureContext';
+import { useChromeT } from '@/i18n/chrome';
 
 interface Props {
   isOpen: boolean;
@@ -14,6 +15,7 @@ interface Props {
 }
 
 export function SecurityTxtModal({ isOpen, onClose, projectName, companyName }: Props) {
+  const { t } = useChromeT();
   const [domain, setDomain] = useState('example.com');
   const [psirtEmail, setPsirtEmail] = useState('psirt@example.com');
   const [csirtEmail, setCsirtEmail] = useState('csirt@example.com');
@@ -72,10 +74,10 @@ export function SecurityTxtModal({ isOpen, onClose, projectName, companyName }: 
             </div>
             <div>
               <h2 className="text-base font-bold text-[#1a1917]">
-                BSI TR-03183-3 security.txt &amp; CVD-Policy Generator
+                {t.txt.title}
               </h2>
               <p className="text-xs text-[#6b6460]">
-                RFC 9116 / RFC 9580 konforme Sicherheitskontakte und koordinierte Offenlegung
+                {t.txt.subtitle}
               </p>
             </div>
           </div>
@@ -89,11 +91,11 @@ export function SecurityTxtModal({ isOpen, onClose, projectName, companyName }: 
           {/* Settings Column */}
           <div className="md:col-span-5 border-r border-[#e5e1d8] p-5 overflow-y-auto space-y-3 bg-[#faf9f7] text-xs">
             <h3 className="font-bold text-[#1a1917] uppercase tracking-wide text-[11px]">
-              Kontakt- &amp; Domänenangaben
+              {t.txt.section}
             </h3>
 
             <div>
-              <label className="block text-[10px] font-bold text-[#6b6460] uppercase mb-0.5">Website Domain:</label>
+              <label className="block text-[10px] font-bold text-[#6b6460] uppercase mb-0.5">{t.txt.domain}</label>
               <input
                 type="text"
                 value={domain}
@@ -104,7 +106,7 @@ export function SecurityTxtModal({ isOpen, onClose, projectName, companyName }: 
 
             <div>
               <label className="block text-[10px] font-bold text-[#6b6460] uppercase mb-0.5">
-                PSIRT E-Mail (Kontakt 1 - Produktsicherheit):
+                {t.txt.psirt}
               </label>
               <input
                 type="email"
@@ -116,7 +118,7 @@ export function SecurityTxtModal({ isOpen, onClose, projectName, companyName }: 
 
             <div>
               <label className="block text-[10px] font-bold text-[#6b6460] uppercase mb-0.5">
-                CSIRT E-Mail (Kontakt 2 - Infrastruktur):
+                {t.txt.csirt}
               </label>
               <input
                 type="email"
@@ -128,7 +130,7 @@ export function SecurityTxtModal({ isOpen, onClose, projectName, companyName }: 
 
             <div>
               <label className="block text-[10px] font-bold text-[#6b6460] uppercase mb-0.5">
-                Meldeseite / Webformular (Kontakt 3):
+                {t.txt.web}
               </label>
               <input
                 type="url"
@@ -140,7 +142,7 @@ export function SecurityTxtModal({ isOpen, onClose, projectName, companyName }: 
 
             <div>
               <label className="block text-[10px] font-bold text-[#6b6460] uppercase mb-0.5">
-                OpenPGP Public Key URI (.asc):
+                {t.txt.pgp}
               </label>
               <input
                 type="url"
@@ -152,7 +154,7 @@ export function SecurityTxtModal({ isOpen, onClose, projectName, companyName }: 
 
             <div>
               <label className="block text-[10px] font-bold text-[#6b6460] uppercase mb-0.5">
-                CVD Policy URL:
+                {t.txt.policy}
               </label>
               <input
                 type="url"
@@ -164,7 +166,7 @@ export function SecurityTxtModal({ isOpen, onClose, projectName, companyName }: 
 
             <div>
               <label className="block text-[10px] font-bold text-[#6b6460] uppercase mb-0.5">
-                CSAF Provider-Metadata URI:
+                {t.txt.csaf}
               </label>
               <input
                 type="url"
@@ -176,7 +178,7 @@ export function SecurityTxtModal({ isOpen, onClose, projectName, companyName }: 
 
             <div>
               <label className="block text-[10px] font-bold text-[#6b6460] uppercase mb-0.5">
-                Gültigkeitsdauer (Max. 365 Tage):
+                {t.txt.expires}
               </label>
               <input
                 type="number"
@@ -224,14 +226,14 @@ export function SecurityTxtModal({ isOpen, onClose, projectName, companyName }: 
                   className="flex items-center gap-1 rounded border border-[#e5e1d8] px-2.5 py-1 text-xs font-semibold text-[#1a1917] hover:bg-[#faf9f7]"
                 >
                   {copied ? <Check size={13} className="text-green-600" /> : <Copy size={13} />}
-                  {copied ? 'Kopiert' : 'Kopieren'}
+                  {copied ? t.txt.copied : t.txt.copy}
                 </button>
                 <button
                   onClick={handleDownload}
                   className="flex items-center gap-1 rounded bg-indigo-600 px-3 py-1 text-xs font-semibold text-white hover:bg-indigo-700"
                 >
                   <Download size={13} />
-                  Download
+                  {t.txt.download}
                 </button>
               </div>
             </div>
@@ -242,7 +244,7 @@ export function SecurityTxtModal({ isOpen, onClose, projectName, companyName }: 
             </div>
 
             <p className="mt-2 text-[10px] text-[#6b6460]">
-              Hinweis: Platzieren Sie die generierte <code>security.txt</code> unter <code>https://{domain}/.well-known/security.txt</code> und signieren Sie diese mit OpenPGP gemäß RFC 9580.
+              {t.txt.hintA}<code>security.txt</code>{t.txt.hintB}<code>https://{domain}/.well-known/security.txt</code>{t.txt.hintC}
             </p>
           </div>
         </div>

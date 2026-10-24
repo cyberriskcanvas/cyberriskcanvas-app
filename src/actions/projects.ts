@@ -128,6 +128,7 @@ export async function createProject(
   teamId?: string,
   initialNodes?: DiagramNode[],
   initialEdges?: DiagramEdge[],
+  craClass?: 'default' | 'class-i' | 'class-ii' | 'critical',
 ) {
   const session = await requireSession();
 
@@ -159,6 +160,7 @@ export async function createProject(
         description: description?.trim(),
         teamId: teamId ?? null,
         ownerId: session.user.id,
+        ...(craClass && { craClass }),
         // Automatically create version 1 (active)
         versions: { create: { number: 1, label: '', status: 'active' } },
       },
@@ -178,6 +180,20 @@ export async function createProject(
 
   revalidatePath('/');
   return project;
+}
+
+/** Whether the project is also assessed against IEC 62443 (Security Level, IEC part, IEC tab, IEC page in the PDF). */
+export async function getIec62443(projectId: string): Promise<boolean> {
+  const session = await requireSession();
+  await assertProjectAccess(projectId, session.user.id);
+  const p = await prisma.project.findUnique({ where: { id: projectId }, select: { iec62443: true } });
+  return p?.iec62443 === true;
+}
+
+export async function setIec62443(projectId: string, enabled: boolean) {
+  const session = await requireSession();
+  await assertProjectWriteAccess(projectId, session.user.id);
+  await prisma.project.update({ where: { id: projectId }, data: { iec62443: enabled === true } });
 }
 
 export async function updateProject(id: string, name: string, description?: string) {

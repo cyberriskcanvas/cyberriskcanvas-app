@@ -6,6 +6,7 @@ import { getToken } from 'next-auth/jwt';
 import { registerCollaboration } from './src/websocket/collaboration';
 import { flushAllDirty } from './src/lib/redis';
 import { ensureAdminUser } from './src/lib/auth';
+import { startBackgroundJobs } from './src/pro/jobs';
 
 const dev = process.env.NODE_ENV !== 'production';
 const hostname = '0.0.0.0';
@@ -53,6 +54,8 @@ app.prepare().then(async () => {
 
   // Safety-net: flush any buffered diagram saves every 5 seconds
   setInterval(() => flushAllDirty().catch(console.error), 5000);
+
+  startBackgroundJobs();
 
   httpServer.listen(port, hostname, () => {
     console.warn(`🚀 CyberRisk Canvas ready on http://${hostname === '0.0.0.0' ? 'localhost' : hostname}:${port}`);

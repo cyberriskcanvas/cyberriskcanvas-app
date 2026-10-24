@@ -7,7 +7,7 @@ const PRO_FEATURES = [
   'AI threat analysis & CWE suggestions',
   'SBOM import (CycloneDX + SPDX)',
   'Attack path visualization',
-  'Approval workflow for review teams',
+  'Assessment & approval workflow for review teams',
   'API access & webhooks',
   'Single Sign-On (OIDC, Microsoft Entra ID, Keycloak)',
   'Custom risk frameworks & templates',

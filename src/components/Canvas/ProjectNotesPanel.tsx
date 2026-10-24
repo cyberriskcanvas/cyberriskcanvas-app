@@ -1,5 +1,6 @@
 'use client';
 
+import { usePanelsT } from '@/i18n/panels';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { X, Eye, Pencil, StickyNote, UserRound } from 'lucide-react';
 import { updateProjectNotes } from '@/actions/projects';
@@ -118,12 +119,14 @@ function inlineMarkdown(text: string): React.ReactNode {
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
-function formatUpdatedAt(iso: string): string {
+function formatUpdatedAt(iso: string, lang: string): string {
   const d = new Date(iso);
-  return d.toLocaleString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  return d.toLocaleString(lang === 'de' ? 'de-DE' : 'en-GB', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
 
 export function ProjectNotesPanel({ projectId, initialNotes, initialUpdatedByName, initialUpdatedAt, currentUserName, onClose }: Props) {
+  const { t, lang } = usePanelsT();
+  const n = t.misc.notes;
   const [notes, setNotes] = useState(initialNotes);
   const [mode, setMode] = useState<'edit' | 'preview'>('edit');
   const [saving, setSaving] = useState(false);
@@ -198,18 +201,18 @@ export function ProjectNotesPanel({ projectId, initialNotes, initialUpdatedByNam
       {/* Header */}
       <div className="flex cursor-grab items-center gap-2 rounded-t-xl border-b border-[#e5e1d8] bg-[#faf9f7] px-3 py-2 select-none">
         <StickyNote className="h-4 w-4 shrink-0 text-[#9b9590]" />
-        <span className="flex-1 text-sm font-medium text-[#3d3a36]">Projekt-Notizen</span>
+        <span className="flex-1 text-sm font-medium text-[#3d3a36]">{n.title}</span>
 
         {/* Save status */}
         <span className={cn('text-xs transition-opacity', saving || saved ? 'opacity-100' : 'opacity-0',
           saved ? 'text-green-600' : 'text-[#9b9590]')}>
-          {saving ? 'Speichern…' : 'Gespeichert'}
+          {saving ? n.saving : n.saved}
         </span>
 
         {/* Edit / Preview toggle */}
         <button
           onClick={() => setMode(mode === 'edit' ? 'preview' : 'edit')}
-          title={mode === 'edit' ? 'Vorschau' : 'Bearbeiten'}
+          title={mode === 'edit' ? n.preview : n.edit}
           className="flex h-6 w-6 items-center justify-center rounded text-[#9b9590] hover:bg-[#f4f1ec] hover:text-[#1a1917]"
         >
           {mode === 'edit' ? <Eye className="h-3.5 w-3.5" /> : <Pencil className="h-3.5 w-3.5" />}
@@ -217,7 +220,7 @@ export function ProjectNotesPanel({ projectId, initialNotes, initialUpdatedByNam
 
         <button
           onClick={onClose}
-          title="Schließen"
+          title={n.close}
           className="flex h-6 w-6 items-center justify-center rounded text-[#9b9590] hover:bg-[#f4f1ec] hover:text-[#1a1917]"
         >
           <X className="h-3.5 w-3.5" />
@@ -229,7 +232,7 @@ export function ProjectNotesPanel({ projectId, initialNotes, initialUpdatedByNam
         <textarea
           value={notes}
           onChange={(e) => handleChange(e.target.value)}
-          placeholder={'# Projektnotizen\n\nMarkdown wird unterstützt:\n- **Fett**, *kursiv*, `Code`\n- Listen, Überschriften…'}
+          placeholder={n.placeholder}
           className="h-72 w-full resize-none bg-white px-3 py-2.5 text-sm font-mono text-[#1a1917] placeholder-[#c0bab4] outline-none"
           spellCheck={false}
         />
@@ -237,7 +240,7 @@ export function ProjectNotesPanel({ projectId, initialNotes, initialUpdatedByNam
         <div className="h-72 overflow-y-auto px-3 py-2.5">
           {notes.trim()
             ? renderMarkdown(notes)
-            : <p className="text-sm text-[#c0bab4]">Noch keine Notizen.</p>}
+            : <p className="text-sm text-[#c0bab4]">{n.none}</p>}
         </div>
       )}
 
@@ -246,11 +249,11 @@ export function ProjectNotesPanel({ projectId, initialNotes, initialUpdatedByNam
         <UserRound className="h-3 w-3 shrink-0 text-[#c0bab4]" />
         {updatedByName ? (
           <span className="text-[11px] text-[#9b9590]">
-            Zuletzt bearbeitet von <span className="font-medium text-[#6b6460]">{updatedByName}</span>
-            {updatedAt && <span className="ml-1 text-[#c0bab4]">· {formatUpdatedAt(updatedAt)}</span>}
+            {n.by}<span className="font-medium text-[#6b6460]">{updatedByName}</span>
+            {updatedAt && <span className="ml-1 text-[#c0bab4]">· {formatUpdatedAt(updatedAt, lang)}</span>}
           </span>
         ) : (
-          <span className="text-[11px] text-[#c0bab4]">Noch nicht bearbeitet</span>
+          <span className="text-[11px] text-[#c0bab4]">{n.never}</span>
         )}
       </div>
     </div>

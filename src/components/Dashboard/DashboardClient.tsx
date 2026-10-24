@@ -1,5 +1,6 @@
 'use client';
 
+import { usePanelsT } from '@/i18n/panels';
 import { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -15,8 +16,11 @@ import {
   Sparkles,
   Key,
 } from 'lucide-react';
-import { aggregateDiagram } from '@/utils/aggregateDiagram';
-import { exportPdf } from '@/utils/exportPdf';
+import { aggregateDiagram, countDrafts, hasTemplateThreats } from '@/utils/aggregateDiagram';
+import type { CraChecklist } from '@/lib/craChecklist';
+import { applyDismissals, checkModel } from '@/utils/modelCheck';
+import type { AnnexViiRow } from '@/utils/docGenerators';
+import { exportPdf } from '@/pro/ui';
 import { SummaryCards } from '@/components/Dashboard/SummaryCards';
 import { RiskHeatmap } from '@/components/Dashboard/RiskHeatmap';
 import { ThreatsBreakdown } from '@/components/Dashboard/ThreatsBreakdown';
@@ -26,21 +30,14 @@ import { TraceabilityMatrix } from '@/components/Dashboard/TraceabilityMatrix';
 import { NextSteps } from '@/components/Dashboard/NextSteps';
 import { CRAReadinessPanel } from '@/components/Dashboard/CRAReadinessPanel';
 import { MultiStandardMatrix } from '@/components/Dashboard/MultiStandardMatrix';
-import { SDLChecklistPanel } from '@/components/Dashboard/SDLChecklistPanel';
 import { BaselineBanner } from '@/components/Baseline/BaselineBanner';
 import { SecurityTxtModal } from '@/components/Compliance/SecurityTxtModal';
 import { useProjectStore } from '@/store/projectStore';
-import type { DiagramNode } from '@/types';
+import type { DiagramNode, DiagramEdge } from '@/types';
 
-const TABS = [
-  { id: 'overview', label: 'Overview' },
-  { id: 'risks', label: 'Risks' },
-  { id: 'compliance', label: 'Compliance' },
-  { id: 'sdl_checklist', label: 'BSI TR-03185 SDL' },
-  { id: 'measures', label: 'Measures' },
-] as const;
+const TABS = ['overview', 'risks', 'compliance', 'sdl_checklist', 'measures'] as const;
 
-type TabId = typeof TABS[number]['id'];
+type TabId = typeof TABS[number];
 
 interface LockState {
   isLocked: boolean;
@@ -55,10 +52,16 @@ interface Props {
   projectId: string;
   diagramName: string;
   initialNodes: unknown[];
+  iec62443: boolean;
+  craChecklist: CraChecklist;
+  initialEdges: unknown[];
+  modelDismissed: Record<string, string>;
+  annexVii: AnnexViiRow[];
   lockState: LockState;
 }
 
-export default function DashboardClient({ diagramId, projectId, diagramName, initialNodes, lockState }: Props) {
+export default function DashboardClient({ diagramId, projectId, diagramName, initialNodes, iec62443, craChecklist, initialEdges, modelDismissed, annexVii, lockState }: Props) {
+  const { t: pt } = usePanelsT();
   const [nodes] = useState<DiagramNode[]>(initialNodes as DiagramNode[]);
   const [exporting, setExporting] = useState<'pdf' | null>(null);
   const [exportMenuOpen, setExportMenuOpen] = useState(false);
@@ -70,7 +73,7 @@ export default function DashboardClient({ diagramId, projectId, diagramName, ini
   const searchParams = useSearchParams();
 
   const activeTab = (searchParams.get('tab') as TabId | null) ?? 'overview';
-  const validTab = TABS.some(t => t.id === activeTab) ? activeTab : 'overview';
+  const validTab = TABS.includes(activeTab as TabId) ? activeTab : 'overview';
 
   const setTab = useCallback((id: TabId) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -102,7 +105,7 @@ export default function DashboardClient({ diagramId, projectId, diagramName, ini
   const handleExportPdf = () => {
     setExporting('pdf');
     setExportMenuOpen(false);
-    exportPdf(diagramName, summary).finally(() => setExporting(null));
+    exportPdf(diagramName, summary, { iec62443, templateBased: hasTemplateThreats(nodes), unconfirmed: countDrafts(nodes) }, craChecklist, applyDismissals(checkModel({ nodes, edges: initialEdges as DiagramEdge[], decidedRequirements: new Set(Object.keys(craChecklist)) }), modelDismissed), annexVii).finally(() => setExporting(null));
   };
 
   return (
@@ -118,7 +121,7 @@ export default function DashboardClient({ diagramId, projectId, diagramName, ini
               <div className="flex items-center gap-2">
                 <Shield size={16} className="text-[#1e293b]" />
                 <span className="font-semibold text-[#1a1917] text-sm">{diagramName}</span>
-                <span className="text-xs text-[#6b6460] hidden sm:inline">- Risk Assessment Dashboard</span>
+                <span className="text-xs text-[#6b6460] hidden sm:inline">- {pt.reports.title}</span>
                 {lockState.isLocked && (
                   <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-700">
                     v{lockState.lockedLabel}
@@ -162,7 +165,7 @@ export default function DashboardClient({ diagramId, projectId, diagramName, ini
                     <Code size={14} className="text-indigo-600" />
                     <div>
                       <div className="font-semibold">BSI CycloneDX 1.6 SBOM</div>
-                      <div className="text-[10px] text-[#6b6460]">BSI TR-03183-2 Taxonomie &amp; SHA-512</div>
+                      <div className="text-[10px] text-[#6b6460]">{pt.misc.export.bsiTax}</div>
                     </div>
                   </a>
 
@@ -188,7 +191,7 @@ export default function DashboardClient({ diagramId, projectId, diagramName, ini
                     <FileSpreadsheet size={14} className="text-green-600" />
                     <div>
                       <div className="font-semibold">CRA Statement of Applicability (SoA)</div>
-                      <div className="text-[10px] text-[#6b6460]">CSV Tabelle nach BSI TR-03183-H</div>
+                      <div className="text-[10px] text-[#6b6460]">{pt.misc.export.csv}</div>
                     </div>
                   </a>
 
@@ -201,7 +204,7 @@ export default function DashboardClient({ diagramId, projectId, diagramName, ini
                     <FileText size={14} className="text-amber-600" />
                     <div>
                       <div className="font-semibold">CRA SoA Bericht (Markdown)</div>
-                      <div className="text-[10px] text-[#6b6460]">Auditsichere Markdown-Dokumentation</div>
+                      <div className="text-[10px] text-[#6b6460]">{pt.misc.export.md}</div>
                     </div>
                   </a>
 
@@ -214,7 +217,7 @@ export default function DashboardClient({ diagramId, projectId, diagramName, ini
                     <Sparkles size={14} className="text-purple-600" />
                     <div>
                       <div className="font-semibold">NIST OSCAL v1.1.0 JSON</div>
-                      <div className="text-[10px] text-[#6b6460]">Maschinenlesbare Prüfergebnisse</div>
+                      <div className="text-[10px] text-[#6b6460]">{pt.misc.export.oscal}</div>
                     </div>
                   </a>
 
@@ -239,15 +242,15 @@ export default function DashboardClient({ diagramId, projectId, diagramName, ini
           <div className="flex gap-1 -mb-px">
             {TABS.map(tab => (
               <button
-                key={tab.id}
-                onClick={() => setTab(tab.id)}
+                key={tab}
+                onClick={() => setTab(tab)}
                 className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-                  validTab === tab.id
+                  validTab === tab
                     ? 'border-[#1e293b] text-[#1a1917]'
                     : 'border-transparent text-[#6b6460] hover:text-[#1a1917] hover:border-[#c8c0b0]'
                 }`}
               >
-                {tab.label}
+                {pt.reports.tabs[tab]}
               </button>
             ))}
           </div>
@@ -259,8 +262,9 @@ export default function DashboardClient({ diagramId, projectId, diagramName, ini
       <main className="mx-auto max-w-7xl px-6 py-6 space-y-6">
         {validTab === 'overview' && (
           <>
-            <NextSteps summary={summary} />
-            <SummaryCards summary={summary} />
+            <p className="text-sm text-[#6b6460]">{pt.reports.intro}</p>
+            <NextSteps summary={summary} iec62443={iec62443} />
+            <SummaryCards summary={summary} iec62443={iec62443} />
             <RiskHeatmap risks={summary.risks} />
           </>
         )}
@@ -274,14 +278,17 @@ export default function DashboardClient({ diagramId, projectId, diagramName, ini
 
         {validTab === 'compliance' && (
           <div className="grid gap-6 xl:grid-cols-2">
-            <ComplianceOverview compliance={summary.compliance} />
+            {iec62443 && <ComplianceOverview compliance={summary.compliance} />}
             <CRAReadinessPanel summary={summary} isLocked={lockState.isLocked} />
-            <div className="xl:col-span-2"><MultiStandardMatrix summary={summary} /></div>
+            {iec62443 && <div className="xl:col-span-2"><MultiStandardMatrix summary={summary} /></div>}
           </div>
         )}
 
         {validTab === 'sdl_checklist' && (
-          <SDLChecklistPanel />
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#e5e1d8] bg-white p-5 text-sm text-[#3d3a36]">
+            <p>{pt.reports.sdlMoved}</p>
+            <Link href="/organisation" className="rounded-lg bg-[#1a1714] px-3 py-1.5 text-xs font-medium text-white hover:bg-[#3d3a36]">{pt.reports.toOrg}</Link>
+          </div>
         )}
 
         {validTab === 'measures' && (

@@ -1,3 +1,4 @@
+import { usePanelsT } from '@/i18n/panels';
 import { useState, useRef, useEffect, useCallback } from 'react';
 import {
   Cpu, Radio, Settings, Router, Shield, Plug, Wifi, HardDrive,
@@ -241,6 +242,7 @@ const SIDEBAR_DEFAULT = 224; // w-56 = 14rem = 224px
 
 export function ComponentSidebar() {
   const t = useT();
+  const { t: pt } = usePanelsT();
   const isLocked = useProjectStore(selectIsLocked);
   const scrollRef = useRef<HTMLDivElement>(null);
   const [showTopShadow, setShowTopShadow] = useState(false);
@@ -286,7 +288,7 @@ export function ComponentSidebar() {
       <aside className="relative flex h-full shrink-0 flex-col border-r border-[#e5e1d8] bg-white overflow-hidden" style={{ width: 40 }}>
         <button
           onClick={() => setCollapsed(false)}
-          title="Sidebar öffnen"
+          title={pt.misc.openSidebar}
           className="flex h-10 w-full items-center justify-center text-[#6b6460] hover:text-[#1a1917] hover:bg-[#f4f1ec] transition-colors"
         >
           <PanelLeftOpen size={16} />

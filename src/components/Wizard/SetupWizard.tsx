@@ -132,6 +132,7 @@ export function SetupWizard({ initialName = '', initialDescription = '', onCompl
       connections,
       storage: storage!,
       boundaries,
+      craClass: computeCRAClass(annexIII, annexIV),
     });
   };
 
@@ -420,7 +421,7 @@ export function SetupWizard({ initialName = '', initialDescription = '', onCompl
               onClick={() => onSkip(projectName.trim(), projectDescription.trim())}
               className="rounded-lg px-3 py-2 text-xs text-[#9ca3af] hover:text-[#6b6460] transition-colors"
             >
-              Empty Project
+              Skip – start with an empty canvas
             </button>
           </div>
 

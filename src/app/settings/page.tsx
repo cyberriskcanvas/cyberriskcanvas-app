@@ -6,11 +6,14 @@ import { getTier } from '@/lib/tierLimits';
 import SettingsClient from '@/components/Settings/SettingsClient';
 
 export const metadata: Metadata = {
-  title: 'Account Settings - CyberRisk Canvas',
+  title: 'Account Settings',
   robots: { index: false, follow: false },
 };
 
-export default async function SettingsPage() {
+export default async function SettingsPage({ searchParams }: { searchParams: Promise<{ section?: string }> }) {
+  const { section } = await searchParams;
+  // the organisation has its own area
+  if (section === 'organisation') redirect('/organisation');
   const session = await auth();
   if (!session?.user?.id) redirect('/login');
 
@@ -20,8 +23,6 @@ export default async function SettingsPage() {
       select: {
         id: true, name: true, email: true, companyName: true, companyLogo: true,
         passwordHash: true, role: true,
-        csafPublisherName: true, csafPublisherNamespace: true,
-        csafPublisherCategory: true, csafIssuingAuthority: true, csafContactDetails: true,
         memberships: {
           include: { team: { select: { id: true, name: true, type: true } } },
           orderBy: { createdAt: 'asc' },
@@ -40,6 +41,7 @@ export default async function SettingsPage() {
 
   return (
     <SettingsClient
+      initialSection={section}
       user={{
         id: user.id,
         name: user.name,
@@ -49,11 +51,6 @@ export default async function SettingsPage() {
         hasPassword: !!user.passwordHash,
         role: user.role,
         isPro: tier === 'pro',
-        csafPublisherName: user.csafPublisherName ?? '',
-        csafPublisherNamespace: user.csafPublisherNamespace ?? '',
-        csafPublisherCategory: user.csafPublisherCategory ?? 'vendor',
-        csafIssuingAuthority: user.csafIssuingAuthority ?? '',
-        csafContactDetails: user.csafContactDetails ?? '',
         memberships: user.memberships.map((m) => ({
           id: m.id,
           role: m.role,

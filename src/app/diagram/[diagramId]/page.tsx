@@ -3,7 +3,7 @@ import { auth } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import { getDiagram } from '@/actions/diagrams';
 import { getActiveVersion } from '@/actions/baselines';
-import { getProjectNotes } from '@/actions/projects';
+import { getProjectNotes, getIec62443 } from '@/actions/projects';
 import DiagramEditorClient from '@/components/DiagramEditor/DiagramEditorClient';
 
 interface Props {
@@ -14,9 +14,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { diagramId } = await params;
   try {
     const diagram = await getDiagram(diagramId);
-    return { title: `${diagram.name} - CyberRisk Canvas` };
+    return { title: diagram.name };
   } catch {
-    return { title: 'Diagram - CyberRisk Canvas' };
+    return { title: 'Diagram' };
   }
 }
 
@@ -26,13 +26,15 @@ export default async function DiagramEditorPage({ params }: Props) {
 
   const { diagramId } = await params;
   const diagram = await getDiagram(diagramId);
-  const [activeVersion, projectNotes] = await Promise.all([
+  const [activeVersion, projectNotes, iec62443] = await Promise.all([
     getActiveVersion(diagram.projectId),
     getProjectNotes(diagram.projectId),
+    getIec62443(diagram.projectId),
   ]);
 
   return (
     <DiagramEditorClient
+      iec62443={iec62443}
       diagram={{
         id: diagram.id,
         name: diagram.name,

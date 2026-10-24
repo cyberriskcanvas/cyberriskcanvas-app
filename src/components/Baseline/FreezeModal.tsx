@@ -5,6 +5,7 @@ import { Lock, X } from 'lucide-react';
 import { freezeVersion } from '@/actions/baselines';
 import { isTierBlock } from '@/lib/tierBlock';
 import { usePaywallStore } from '@/store/paywallStore';
+import { useChromeT } from '@/i18n/chrome';
 
 interface Props {
   projectId: string;
@@ -17,11 +18,12 @@ export function FreezeModal({ projectId, onSuccess, onClose }: Props) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const showPaywall = usePaywallStore((s) => s.showPaywall);
+  const { t } = useChromeT();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!label.trim()) {
-      setError('Bitte eine Versionsbezeichnung eingeben.');
+      setError(t.freeze.required);
       return;
     }
     setLoading(true);
@@ -35,7 +37,7 @@ export function FreezeModal({ projectId, onSuccess, onClose }: Props) {
       }
       onSuccess(result.newVersionId, result.newVersionNumber);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Fehler beim Einfrieren.');
+      setError(err instanceof Error ? err.message : t.freeze.failed);
     } finally {
       setLoading(false);
     }
@@ -47,7 +49,7 @@ export function FreezeModal({ projectId, onSuccess, onClose }: Props) {
         <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4">
           <div className="flex items-center gap-2">
             <Lock size={18} className="text-amber-600" />
-            <h2 className="text-base font-semibold text-gray-900">Version einfrieren</h2>
+            <h2 className="text-base font-semibold text-gray-900">{t.freeze.title}</h2>
           </div>
           <button onClick={onClose} className="rounded-lg p-1 text-gray-400 hover:bg-gray-100">
             <X size={18} />
@@ -56,19 +58,18 @@ export function FreezeModal({ projectId, onSuccess, onClose }: Props) {
 
         <form onSubmit={handleSubmit} className="space-y-4 px-6 py-5">
           <p className="text-sm text-gray-600">
-            Die aktuelle Version wird eingefroren. Risikoanalyse und SBOM werden als fester Stand gespeichert.
-            Anschließend startet automatisch eine neue aktive Version.
+            {t.freeze.body}
           </p>
 
           <div>
             <label className="mb-1.5 block text-sm font-medium text-gray-700">
-              Versionsbezeichnung <span className="text-red-500">*</span>
+              {t.freeze.label} <span className="text-red-500">*</span>
             </label>
             <input
               type="text"
               value={label}
               onChange={(e) => setLabel(e.target.value)}
-              placeholder="z.B. 1.0 oder CRA-Audit-2026-Q2"
+              placeholder={t.freeze.placeholder}
               className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-100"
               autoFocus
             />
@@ -79,12 +80,12 @@ export function FreezeModal({ projectId, onSuccess, onClose }: Props) {
           <div className="flex justify-end gap-3 pt-2">
             <button type="button" onClick={onClose}
               className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
-              Abbrechen
+              {t.freeze.cancel}
             </button>
             <button type="submit" disabled={loading}
               className="flex items-center gap-2 rounded-lg bg-amber-500 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-600 disabled:opacity-50">
               <Lock size={14} />
-              {loading ? 'Wird eingefroren…' : 'Version einfrieren'}
+              {loading ? t.freeze.busy : t.freeze.submit}
             </button>
           </div>
         </form>

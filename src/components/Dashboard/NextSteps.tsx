@@ -6,7 +6,7 @@ interface ActionItem {
   text: string;
 }
 
-function deriveActions(summary: DiagramSummary): ActionItem[] {
+function deriveActions(summary: DiagramSummary, iec62443: boolean): ActionItem[] {
   const actions: ActionItem[] = [];
 
   const critHigh = (summary.riskCounts['critical'] ?? 0) + (summary.riskCounts['high'] ?? 0);
@@ -45,7 +45,9 @@ function deriveActions(summary: DiagramSummary): ActionItem[] {
     });
   }
 
-  if (summary.compliance.length === 0 && summary.components.length > 0) {
+  if (!iec62443) {
+    // IEC 62443 is not assessed in this project
+  } else if (summary.compliance.length === 0 && summary.components.length > 0) {
     actions.push({
       level: 'info',
       text: 'No Security Level (SL) set for any component - IEC 62443 assessment not yet possible.',
@@ -85,8 +87,8 @@ const LEVEL_CONFIG = {
   },
 } as const;
 
-export function NextSteps({ summary }: { summary: DiagramSummary }) {
-  const actions = deriveActions(summary);
+export function NextSteps({ summary, iec62443 }: { summary: DiagramSummary; iec62443: boolean }) {
+  const actions = deriveActions(summary, iec62443);
 
   if (actions.length === 0) {
     return (

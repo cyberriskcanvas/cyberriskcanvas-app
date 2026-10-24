@@ -1,15 +1,13 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { X, Info, Database, AlertTriangle, Activity, ShieldCheck, CheckSquare, FlaskConical, FileCheck, ChevronLeft, ChevronRight, ArrowRight } from 'lucide-react';
+import { X, Info, Database, Activity, ShieldCheck, FlaskConical, ChevronLeft, ChevronRight, ArrowRight } from 'lucide-react';
 import { useDiagramStore } from '@/store/diagramStore';
 import { useProjectStore } from '@/store/projectStore';
 import { useT } from '@/hooks/useT';
 import { OverviewTab } from './tabs/OverviewTab';
 import { AssetsTab } from './tabs/AssetsTab';
-import { ThreatsTab } from './tabs/ThreatsTab';
-import { RisksTab } from './tabs/RisksTab';
+import { RiskFlowTab } from './tabs/RiskFlowTab';
 import { IEC62443Tab } from './tabs/IEC62443Tab';
-import { CRATab } from './tabs/CRATab';
-import { MeasuresTab } from './tabs/MeasuresTab';
+import { NodeTodo } from './NodeTodo';
 import { SecurityTestsTab } from './tabs/SecurityTestsTab';
 import { EdgeOverviewTab } from './tabs/EdgeOverviewTab';
 import { cn } from '@/utils/cn';
@@ -24,6 +22,9 @@ interface Tab {
   count?: number;
 }
 
+/** Threats, risks and measures are one tab now; links from the task list and the tour still name the old ones. */
+const tabFor = (tab: string) => (tab === 'threats' || tab === 'measures' ? 'risks' : tab);
+
 const MIN_WIDTH = 280;
 const MAX_WIDTH = 640;
 const DEFAULT_WIDTH = 380;
@@ -31,6 +32,8 @@ const DEFAULT_WIDTH = 380;
 export function DetailPanel() {
   const { selectedNodeId, selectedEdgeId, nodes, edges, closeDetailPanel } = useDiagramStore();
   const activeVersion = useProjectStore((s) => s.activeVersion);
+  const iec62443 = useProjectStore((s) => s.iec62443);
+  const { detailTab, clearDetailTab } = useDiagramStore();
   const isLocked = activeVersion?.status === 'frozen';
   const [activeTab, setActiveTab] = useState('overview');
   const { panelTab } = useTourStore();
@@ -64,11 +67,24 @@ export function DetailPanel() {
   }, []);
 
   useEffect(() => {
-    if (panelTab) setActiveTab(panelTab);
+    if (panelTab) setActiveTab(tabFor(panelTab));
   }, [panelTab]);
 
+  // Deep link from the task view: open the requested tab once, after the node is selected
   useEffect(() => {
-    setActiveTab('overview');
+    if (!detailTab) return;
+    setActiveTab(tabFor(detailTab));
+    clearDetailTab();
+  }, [detailTab, selectedNodeId, clearDetailTab]);
+
+  // The IEC tab only exists for projects assessed against IEC 62443; do not stay on it when it goes away
+  useEffect(() => {
+    if (!iec62443) setActiveTab((tab) => (tab === 'iec62443' ? 'overview' : tab));
+  }, [iec62443]);
+
+  // Only reset when an edge gets selected; resetting on mount would override a deep-linked tab
+  useEffect(() => {
+    if (selectedEdgeId) setActiveTab('overview');
   }, [selectedEdgeId]);
 
   const onMouseDown = useCallback((e: React.MouseEvent) => {
@@ -144,11 +160,8 @@ export function DetailPanel() {
     { id: 'overview', label: t.detailPanel.overview, icon: Info },
     ...(isBoundary ? [] : [
       { id: 'assets', label: t.detailPanel.assets, icon: Database, count: (data.assets as unknown[])?.length },
-      { id: 'threats', label: t.detailPanel.threats, icon: AlertTriangle, count: (data.threats as unknown[])?.length },
       { id: 'risks', label: t.detailPanel.risks, icon: Activity, count: criticalCount || undefined },
-      { id: 'iec62443', label: 'IEC 62443', icon: ShieldCheck },
-      { id: 'cra', label: 'CRA', icon: FileCheck },
-      { id: 'measures', label: t.detailPanel.measures, icon: CheckSquare, count: (data.measures as unknown[])?.length },
+      ...(iec62443 ? [{ id: 'iec62443', label: 'IEC 62443', icon: ShieldCheck }] : []),
       { id: 'security-tests', label: t.detailPanel.tests, icon: FlaskConical, count: failedTestCount || undefined },
     ]),
   ];
@@ -192,6 +205,8 @@ export function DetailPanel() {
         </button>
       </div>
 
+      {!isBoundary && <NodeTodo nodeId={selectedNodeId} onOpen={(tab) => setActiveTab(tabFor(tab))} />}
+
       {/* Tab bar */}
       <div className="relative w-full shrink-0 border-b border-[#e5e1d8] bg-[#faf9f7]">
         {canScrollLeft && (
@@ -221,13 +236,6 @@ export function DetailPanel() {
               <button
                 key={tab.id}
                 onClick={() => handleTabClick(tab.id)}
-                data-tour={
-                  tab.id === 'threats' ? 'threats-list' :
-                  tab.id === 'iec62443' ? 'iec-dropdown' :
-                  tab.id === 'risks' ? 'risk-matrix' :
-                  tab.id === 'measures' ? 'measures-tracker' :
-                  undefined
-                }
                 className={cn(
                   'flex shrink-0 items-center gap-1.5 px-3 py-2.5 text-xs font-medium transition-colors relative',
                   activeTab === tab.id
@@ -255,11 +263,8 @@ export function DetailPanel() {
       <div className="flex-1 overflow-y-auto">
         {activeTab === 'overview' && <OverviewTab key={selectedNodeId} nodeId={selectedNodeId} data={data} nodeType={nodeType} />}
         {activeTab === 'assets' && <AssetsTab nodeId={selectedNodeId} data={data} />}
-        {activeTab === 'threats' && <ThreatsTab nodeId={selectedNodeId} nodeType={nodeType} data={data} />}
-        {activeTab === 'risks' && <RisksTab nodeId={selectedNodeId} data={data} />}
-        {activeTab === 'iec62443' && <IEC62443Tab nodeId={selectedNodeId} nodeType={nodeType} data={data} />}
-        {activeTab === 'cra' && <CRATab nodeId={selectedNodeId} data={data} />}
-        {activeTab === 'measures' && <MeasuresTab nodeId={selectedNodeId} data={data} readOnly={isLocked} />}
+        {activeTab === 'risks' && <RiskFlowTab key={selectedNodeId} nodeId={selectedNodeId} nodeType={nodeType} data={data} readOnly={isLocked} />}
+        {activeTab === 'iec62443' && iec62443 && <IEC62443Tab nodeId={selectedNodeId} nodeType={nodeType} data={data} />}
         {activeTab === 'security-tests' && <SecurityTestsTab nodeId={selectedNodeId} data={data} />}
       </div>
 

@@ -1,0 +1,100 @@
+name: CyberRisk Canvas CI evidence
+description: Upload SBOM and scan results to CyberRisk Canvas and fail the job when the release gate does not pass.
+inputs:
+  url:
+    description: Base URL of your CyberRisk Canvas instance
+    required: true
+  token:
+    description: Project CI token (crci_...), store it as a repository secret
+    required: true
+  sbom:
+    description: CycloneDX >= 1.6 or SPDX 3.0.1 JSON file
+  sast:
+    description: SARIF file from a SAST tool
+  secrets:
+    description: SARIF file from a secret scanner
+  vulnscan:
+    description: SARIF file from a vulnerability scanner
+  dast:
+    description: SARIF file from a DAST scan of the running product (your own target)
+  tls:
+    description: testssl.sh JSON report (--jsonfile) of your own TLS endpoint
+  ports:
+    description: nmap XML report (-oX) of your own host
+  part:
+    description: Part name for multi-part products (frontend, backend, image)
+  version:
+    description: Project version number (default is the active version)
+  gate:
+    description: Check the release gate after uploading
+    default: 'true'
+  require:
+    description: Comma-separated sources that must have a run (default is the uploaded ones)
+  fail-on:
+    description: Lowest untriaged severity that fails the gate (critical, high, medium, low)
+    default: high
+  release:
+    description: Freeze the active version with this label (for example the tag name) once the gate passes. Use it on tag builds only.
+  comment:
+    description: Post the gate result as a pull request comment (needs github-token with pull-requests write)
+    default: 'false'
+  issues:
+    description: Open and close GitHub issues for open measures and failed security tests (needs github-token with issues write)
+    default: 'false'
+  github-token:
+    description: Token for the comment and issue sync, usually ${{ github.token }}
+runs:
+  using: composite
+  steps:
+    - shell: sh
+      env:
+        CRC_URL: ${{ inputs.url }}
+        CRC_TOKEN: ${{ inputs.token }}
+        CRC_PART: ${{ inputs.part }}
+        CRC_VERSION: ${{ inputs.version }}
+        CRC_GATE: ${{ inputs.gate }}
+        CRC_REQUIRE: ${{ inputs.require }}
+        CRC_FAIL_ON: ${{ inputs.fail-on }}
+        CRC_RELEASE: ${{ inputs.release }}
+        CRC_GATE_OUT: ${{ runner.temp }}/crc-gate.json
+        IN_SBOM: ${{ inputs.sbom }}
+        IN_SAST: ${{ inputs.sast }}
+        IN_SECRETS: ${{ inputs.secrets }}
+        IN_VULNSCAN: ${{ inputs.vulnscan }}
+        IN_DAST: ${{ inputs.dast }}
+        IN_TLS: ${{ inputs.tls }}
+        IN_PORTS: ${{ inputs.ports }}
+      run: |
+        set --
+        [ -n "$IN_SBOM" ] && set -- "$@" "sbom=$IN_SBOM"
+        [ -n "$IN_SAST" ] && set -- "$@" "sast=$IN_SAST"
+        [ -n "$IN_SECRETS" ] && set -- "$@" "secrets=$IN_SECRETS"
+        [ -n "$IN_VULNSCAN" ] && set -- "$@" "vulnscan=$IN_VULNSCAN"
+        [ -n "$IN_DAST" ] && set -- "$@" "dast=$IN_DAST"
+        [ -n "$IN_TLS" ] && set -- "$@" "tls=$IN_TLS"
+        [ -n "$IN_PORTS" ] && set -- "$@" "ports=$IN_PORTS"
+        sh "$GITHUB_ACTION_PATH/../public/ci/crc.sh" "$@"
+    - if: always() && inputs.comment == 'true' && github.event_name == 'pull_request'
+      shell: sh
+      env:
+        GH_TOKEN: ${{ inputs.github-token }}
+        GATE_FILE: ${{ runner.temp }}/crc-gate.json
+        COMMENTS_URL: ${{ github.api_url }}/repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/comments
+      run: |
+        [ -f "$GATE_FILE" ] || exit 0
+        marker='<!-- crc-gate -->'
+        body=$(jq -r --arg m "$marker" '$m + "\n**CyberRisk Canvas release gate" + (if .version then " (version " + (.version|tostring) + ")" else "" end) + ": " + (if .pass then "passed" else "failed" end) + "**" + ([.reasons[]? | "\n- " + .message] | join(""))' "$GATE_FILE")
+        id=$(curl -fsS -H "Authorization: Bearer $GH_TOKEN" "$COMMENTS_URL?per_page=100" | jq -r --arg m "$marker" '[.[] | select(.body | startswith($m))][0].id // empty')
+        payload=$(jq -n --arg b "$body" '{body: $b}')
+        if [ -n "$id" ]; then
+          curl -fsS -X PATCH -H "Authorization: Bearer $GH_TOKEN" -d "$payload" "${COMMENTS_URL%/issues/*}/issues/comments/$id" >/dev/null
+        else
+          curl -fsS -X POST -H "Authorization: Bearer $GH_TOKEN" -d "$payload" "$COMMENTS_URL" >/dev/null
+        fi
+    - if: always() && inputs.issues == 'true'
+      shell: sh
+      env:
+        CRC_URL: ${{ inputs.url }}
+        CRC_TOKEN: ${{ inputs.token }}
+        GITHUB_TOKEN: ${{ inputs.github-token }}
+      run: sh "$GITHUB_ACTION_PATH/../public/ci/sync-issues.sh"

@@ -6,6 +6,7 @@ import { branchProject } from '@/actions/baselines';
 import { isTierBlock } from '@/lib/tierBlock';
 import { usePaywallStore } from '@/store/paywallStore';
 import { useRouter } from 'next/navigation';
+import { useChromeT } from '@/i18n/chrome';
 
 interface Props {
   projectId: string;
@@ -20,6 +21,7 @@ export function BranchModal({ projectId, suggestedName, lockedLabel, onClose }: 
   const [error, setError] = useState('');
   const showPaywall = usePaywallStore((s) => s.showPaywall);
   const router = useRouter();
+  const { t } = useChromeT();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -40,7 +42,7 @@ export function BranchModal({ projectId, suggestedName, lockedLabel, onClose }: 
       }
       onClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Fehler beim Erstellen der Arbeitskopie.');
+      setError(err instanceof Error ? err.message : t.branch.failed);
     } finally {
       setLoading(false);
     }
@@ -52,7 +54,7 @@ export function BranchModal({ projectId, suggestedName, lockedLabel, onClose }: 
         <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4">
           <div className="flex items-center gap-2">
             <GitBranch size={18} className="text-indigo-600" />
-            <h2 className="text-base font-semibold text-gray-900">Neue Arbeitskopie erstellen</h2>
+            <h2 className="text-base font-semibold text-gray-900">{t.branch.title}</h2>
           </div>
           <button onClick={onClose} className="rounded-lg p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600">
             <X size={18} />
@@ -61,12 +63,11 @@ export function BranchModal({ projectId, suggestedName, lockedLabel, onClose }: 
 
         <form onSubmit={handleSubmit} className="space-y-4 px-6 py-5">
           <p className="text-sm text-gray-600">
-            Es wird eine vollständige Kopie von Version <strong>{lockedLabel}</strong> erstellt.
-            Das Original bleibt eingefroren und unverändert.
+            {t.branch.body(lockedLabel)}
           </p>
 
           <div>
-            <label className="mb-1.5 block text-sm font-medium text-gray-700">Name der neuen Arbeitskopie</label>
+            <label className="mb-1.5 block text-sm font-medium text-gray-700">{t.branch.name}</label>
             <input
               type="text"
               value={name}
@@ -81,12 +82,12 @@ export function BranchModal({ projectId, suggestedName, lockedLabel, onClose }: 
           <div className="flex justify-end gap-3 pt-2">
             <button type="button" onClick={onClose}
               className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
-              Abbrechen
+              {t.branch.cancel}
             </button>
             <button type="submit" disabled={loading}
               className="flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-50">
               <GitBranch size={14} />
-              {loading ? 'Wird erstellt...' : 'Arbeitskopie erstellen'}
+              {loading ? t.branch.busy : t.branch.submit}
             </button>
           </div>
         </form>

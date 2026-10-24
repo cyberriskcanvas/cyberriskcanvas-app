@@ -4,7 +4,7 @@ import { useDiagramStore } from '@/store/diagramStore';
 import { useProjectStore } from '@/store/projectStore';
 import type { NodeData, Threat, Risk, RiskLevel } from '@/types';
 import { useT } from '@/hooks/useT';
-import { AISuggestCwe } from '@/components/AI/AISuggestCwe';
+import { AISuggestCwe } from '@/pro/ui';
 import { searchCwe, type CweEntry } from '@/data/cwe';
 import { cn } from '@/utils/cn';
 import {
@@ -19,7 +19,7 @@ import {
 } from '@/actions/threatLibrary';
 import { getExamplesForType, type ThreatExample } from '@/data/threatExamples';
 
-const STRIDE_COLORS: Record<Threat['stride'], string> = {
+export const STRIDE_COLORS: Record<Threat['stride'], string> = {
   S: 'bg-red-100 text-red-700',
   T: 'bg-orange-100 text-orange-700',
   R: 'bg-yellow-100 text-yellow-700',
@@ -28,7 +28,7 @@ const STRIDE_COLORS: Record<Threat['stride'], string> = {
   E: 'bg-pink-100 text-pink-700',
 };
 
-const STRIDE_LABELS: Record<Threat['stride'], string> = {
+export const STRIDE_LABELS: Record<Threat['stride'], string> = {
   S: 'Spoofing', T: 'Tampering', R: 'Repudiation',
   I: 'Info Disclosure', D: 'Denial of Service', E: 'Elevation of Privilege',
 };
@@ -46,7 +46,7 @@ const inputClass = 'w-full rounded border border-[#e5e1d8] bg-white px-2 py-1.5 
 
 // ─── Risk auto-suggest ────────────────────────────────────────────────────────
 
-const STRIDE_RISK_DEFAULTS: Record<Threat['stride'], { likelihood: 1|2|3|4|5; impact: 1|2|3|4|5 }> = {
+export const STRIDE_RISK_DEFAULTS: Record<Threat['stride'], { likelihood: 1|2|3|4|5; impact: 1|2|3|4|5 }> = {
   S: { likelihood: 3, impact: 4 }, // Spoofing      → HIGH
   T: { likelihood: 3, impact: 4 }, // Tampering     → HIGH
   R: { likelihood: 2, impact: 3 }, // Repudiation   → MEDIUM
@@ -68,6 +68,8 @@ interface Props {
   nodeId: string;
   nodeType: string;
   data: NodeData;
+  /** The risk-flow tab lists the threats as cards itself: only the library, suggestions and the add form are shown. */
+  addOnly?: boolean;
 }
 
 // ─── Suggested entry (from curated catalogue, save-to-library) ───────────────
@@ -377,7 +379,7 @@ function LibraryPanel({
 
 // ─── ThreatsTab ───────────────────────────────────────────────────────────────
 
-export function ThreatsTab({ nodeId, nodeType, data }: Props) {
+export function ThreatsTab({ nodeId, nodeType, data, addOnly = false }: Props) {
   const { updateNodeData } = useDiagramStore();
   const projectId = useProjectStore((s) => s.projectId);
   const threats = (data.threats ?? []) as Threat[];
@@ -560,7 +562,7 @@ export function ThreatsTab({ nodeId, nodeType, data }: Props) {
             {componentType ? `Load ${componentType.toUpperCase()} examples` : t.threats.loadExamples}
           </button>
         </div>
-      ) : (
+      ) : addOnly ? null : (
         <div className="space-y-2">
           {threats.map((th) => {
             const alreadySaved = savedIds.has(th.id);
@@ -574,6 +576,7 @@ export function ThreatsTab({ nodeId, nodeType, data }: Props) {
                         {th.stride}
                       </span>
                       <span className="text-sm font-medium text-[#1a1917]">{th.name}</span>
+                      {th.draft && <span className="rounded border border-amber-300 bg-amber-50 px-1.5 py-0.5 text-[10px] font-medium text-amber-800">Draft: confirm</span>}
                     </div>
                     <div className="mt-1 flex items-center gap-2">
                       <span className="text-xs text-[#6b6460]">{STRIDE_LABELS[th.stride]}</span>

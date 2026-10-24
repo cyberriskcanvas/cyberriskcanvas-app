@@ -1,5 +1,6 @@
 'use client';
 
+import { usePanelsT } from '@/i18n/panels';
 import { useState } from 'react';
 import { Plus, Trash2, Database, Pencil, X, Shield, BookmarkCheck } from 'lucide-react';
 import { useDiagramStore } from '@/store/diagramStore';
@@ -39,6 +40,7 @@ interface Props {
 }
 
 export function AssetsTab({ nodeId, data }: Props) {
+  const { t: pt } = usePanelsT();
   const { updateNodeData } = useDiagramStore();
   const assets = (data.assets ?? []) as Asset[];
   const t = useT();
@@ -141,7 +143,7 @@ export function AssetsTab({ nodeId, data }: Props) {
           <Database size={28} />
           <p className="text-sm">{t.assets.noAssets}</p>
           <p className="text-xs text-[#9b9590] max-w-xs">
-            Wähle unten ein standardisiertes Asset aus dem BSI TR-03183-1 Katalog oder erstelle ein individuelles Schutzgut.
+            {pt.bsi.noAssetsHint}
           </p>
         </div>
       ) : (
@@ -157,6 +159,7 @@ export function AssetsTab({ nodeId, data }: Props) {
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-1.5 flex-wrap">
                   <span className="text-sm font-medium text-[#1a1917]">{a.name}</span>
+                  {a.draft && <span className="rounded border border-amber-300 bg-amber-50 px-1.5 py-0.5 text-[10px] font-medium text-amber-800">Draft: confirm</span>}
                   <span className={cn('rounded border px-1.5 py-0.5 text-[10px] font-medium', CATEGORY_COLORS[a.category])}>
                     {a.category}
                   </span>
@@ -192,14 +195,14 @@ export function AssetsTab({ nodeId, data }: Props) {
                 <button
                   onClick={() => startEdit(a)}
                   className="rounded p-1 text-[#6b6460] hover:bg-[#f4f1ec] hover:text-[#1e293b]"
-                  title="Bearbeiten"
+                  title={pt.bsi.edit}
                 >
                   <Pencil size={13} />
                 </button>
                 <button
                   onClick={() => remove(a.id)}
                   className="rounded p-1 text-[#6b6460] hover:bg-red-50 hover:text-red-600"
-                  title="Löschen"
+                  title={pt.bsi.del}
                 >
                   <Trash2 size={14} />
                 </button>
@@ -215,7 +218,7 @@ export function AssetsTab({ nodeId, data }: Props) {
           <div className="flex items-center gap-1.5">
             <BookmarkCheck size={14} className="text-indigo-600" />
             <p className="text-xs font-semibold text-[#1a1917] uppercase tracking-wide">
-              {editingId ? t.assets.editAsset : 'Schutzgut hinzufügen (BSI TR-03183-1)'}
+              {editingId ? t.assets.editAsset : pt.bsi.addAsset}
             </p>
           </div>
           {editingId && (
@@ -235,22 +238,22 @@ export function AssetsTab({ nodeId, data }: Props) {
             onChange={(e) => handleSelectBsiTemplate(e.target.value)}
             className="w-full rounded border border-indigo-200 bg-indigo-50/50 px-2 py-1.5 text-xs text-[#1a1917] focus:border-[#1e293b] focus:outline-none"
           >
-            <option value="">-- Standard-Vorlage auswählen (optional) --</option>
-            <optgroup label="BSI TR-03183-1 Tabelle 1: Daten-Assets">
+            <option value="">{pt.bsi.template}</option>
+            <optgroup label={pt.bsi.tables.data}>
               {BSI_ASSET_CATALOG.filter((a) => a.category === 'data').map((a) => (
                 <option key={a.code} value={a.code}>
                   [{a.code}] {a.name} (C:{a.defaultC} I:{a.defaultI} A:{a.defaultA})
                 </option>
               ))}
             </optgroup>
-            <optgroup label="BSI TR-03183-1 Tabelle 2: Funktions-Assets">
+            <optgroup label={pt.bsi.tables.function}>
               {BSI_ASSET_CATALOG.filter((a) => a.category === 'functional').map((a) => (
                 <option key={a.code} value={a.code}>
                   [{a.code}] {a.name} (A:{a.defaultA})
                 </option>
               ))}
             </optgroup>
-            <optgroup label="BSI TR-03183-1 Tabelle 3: Sicherheits-Assets">
+            <optgroup label={pt.bsi.tables.security}>
               {BSI_ASSET_CATALOG.filter((a) => a.category === 'security').map((a) => (
                 <option key={a.code} value={a.code}>
                   [{a.code}] {a.name}
@@ -261,7 +264,7 @@ export function AssetsTab({ nodeId, data }: Props) {
         </div>
 
         <div>
-          <label className="block text-[10px] font-bold text-[#6b6460] uppercase mb-1">Asset-Name:</label>
+          <label className="block text-[10px] font-bold text-[#6b6460] uppercase mb-1">{pt.bsi.assetName}</label>
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
@@ -272,7 +275,7 @@ export function AssetsTab({ nodeId, data }: Props) {
 
         <div className="grid grid-cols-2 gap-2">
           <div>
-            <label className="block text-[10px] font-bold text-[#6b6460] uppercase mb-1">Kategorie:</label>
+            <label className="block text-[10px] font-bold text-[#6b6460] uppercase mb-1">{pt.bsi.category}</label>
             <select
               value={category}
               onChange={(e) => setCategory(e.target.value as AssetCategory)}
@@ -288,17 +291,17 @@ export function AssetsTab({ nodeId, data }: Props) {
 
           <div>
             <label className="block text-[10px] font-bold text-[#6b6460] uppercase mb-1">
-              Verstärker (Amplifier):
+              {pt.bsi.amplifier}
             </label>
             <select
               value={amplifier}
               onChange={(e) => setAmplifier(parseFloat(e.target.value))}
               className="w-full rounded border border-[#e5e1d8] bg-white px-2 py-1.5 text-xs text-[#1a1917] focus:border-[#1e293b] focus:outline-none"
             >
-              <option value="1.0">Standard (x1.0)</option>
-              <option value="1.25">Gesteigert (x1.25)</option>
-              <option value="1.5">Große Datenmenge (x1.5)</option>
-              <option value="2.0">Kritische Infrastruktur (x2.0)</option>
+              <option value="1.0">{pt.bsi.amp['1.0']}</option>
+              <option value="1.25">{pt.bsi.amp['1.25']}</option>
+              <option value="1.5">{pt.bsi.amp['1.5']}</option>
+              <option value="2.0">{pt.bsi.amp['2.0']}</option>
             </select>
           </div>
         </div>
@@ -310,52 +313,52 @@ export function AssetsTab({ nodeId, data }: Props) {
           </label>
           <div className="grid grid-cols-3 gap-2">
             <div>
-              <span className="text-[10px] text-[#6b6460]">Vertraulichkeit (C):</span>
+              <span className="text-[10px] text-[#6b6460]">{pt.bsi.c}</span>
               <select
                 value={cVal}
                 onChange={(e) => setCVal(parseInt(e.target.value, 10))}
                 className="w-full rounded border border-[#e5e1d8] bg-white px-2 py-1 text-xs text-[#1a1917]"
               >
-                <option value="1">1 - Gering</option>
-                <option value="2">2 - Niedrig</option>
-                <option value="3">3 - Moderat</option>
-                <option value="4">4 - Hoch</option>
-                <option value="5">5 - Sehr hoch</option>
+                <option value="1">{pt.bsi.levels[0]}</option>
+                <option value="2">{pt.bsi.levels[1]}</option>
+                <option value="3">{pt.bsi.levels[2]}</option>
+                <option value="4">{pt.bsi.levels[3]}</option>
+                <option value="5">{pt.bsi.levels[4]}</option>
               </select>
             </div>
             <div>
-              <span className="text-[10px] text-[#6b6460]">Integrität (I):</span>
+              <span className="text-[10px] text-[#6b6460]">{pt.bsi.i}</span>
               <select
                 value={iVal}
                 onChange={(e) => setIVal(parseInt(e.target.value, 10))}
                 className="w-full rounded border border-[#e5e1d8] bg-white px-2 py-1 text-xs text-[#1a1917]"
               >
-                <option value="1">1 - Gering</option>
-                <option value="2">2 - Niedrig</option>
-                <option value="3">3 - Moderat</option>
-                <option value="4">4 - Hoch</option>
-                <option value="5">5 - Sehr hoch</option>
+                <option value="1">{pt.bsi.levels[0]}</option>
+                <option value="2">{pt.bsi.levels[1]}</option>
+                <option value="3">{pt.bsi.levels[2]}</option>
+                <option value="4">{pt.bsi.levels[3]}</option>
+                <option value="5">{pt.bsi.levels[4]}</option>
               </select>
             </div>
             <div>
-              <span className="text-[10px] text-[#6b6460]">Verfügbarkeit (A):</span>
+              <span className="text-[10px] text-[#6b6460]">{pt.bsi.a}</span>
               <select
                 value={aVal}
                 onChange={(e) => setAVal(parseInt(e.target.value, 10))}
                 className="w-full rounded border border-[#e5e1d8] bg-white px-2 py-1 text-xs text-[#1a1917]"
               >
-                <option value="1">1 - Gering</option>
-                <option value="2">2 - Niedrig</option>
-                <option value="3">3 - Moderat</option>
-                <option value="4">4 - Hoch</option>
-                <option value="5">5 - Sehr hoch</option>
+                <option value="1">{pt.bsi.levels[0]}</option>
+                <option value="2">{pt.bsi.levels[1]}</option>
+                <option value="3">{pt.bsi.levels[2]}</option>
+                <option value="4">{pt.bsi.levels[3]}</option>
+                <option value="5">{pt.bsi.levels[4]}</option>
               </select>
             </div>
           </div>
         </div>
 
         <div>
-          <label className="block text-[10px] font-bold text-[#6b6460] uppercase mb-1">Beschreibung / Rationale:</label>
+          <label className="block text-[10px] font-bold text-[#6b6460] uppercase mb-1">{pt.bsi.description}</label>
           <input
             value={description}
             onChange={(e) => setDescription(e.target.value)}

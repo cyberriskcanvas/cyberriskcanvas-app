@@ -6,7 +6,7 @@ import { redirect } from 'next/navigation';
 import LoginClient from '@/components/Login/LoginClient';
 
 export const metadata: Metadata = {
-  title: 'Sign In - CyberRisk Canvas',
+  title: 'Sign In',
   description: 'Sign in to your CyberRisk Canvas account to manage your cybersecurity risk assessments.',
   robots: { index: false, follow: false },
 };

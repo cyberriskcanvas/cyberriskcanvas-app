@@ -1,3 +1,4 @@
+import { usePanelsT } from '@/i18n/panels';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ReactFlow,
@@ -84,6 +85,7 @@ function pathEdgeStyle(score: number): React.CSSProperties {
 }
 
 export function DiagramCanvas({ diagramId, highlightedPath }: DiagramCanvasProps) {
+  const { t: pt } = usePanelsT();
   const {
     nodes, edges, viewport,
     onNodesChange, onEdgesChange,
@@ -341,7 +343,7 @@ export function DiagramCanvas({ diagramId, highlightedPath }: DiagramCanvasProps
       } catch (err) {
         // Without this the drop fails silently and the component simply never appears.
         console.error('drop failed', err);
-        setSaveError('Komponente konnte nicht eingefügt werden. Bitte Seite neu laden.');
+        setSaveError(pt.misc.dropFailed);
       }
     },
     [addNode, broadcastNodes, scheduleSave, viewport],

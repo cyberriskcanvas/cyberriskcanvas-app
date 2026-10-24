@@ -1,16 +1,21 @@
 'use client';
 
+import { usePanelsT } from '@/i18n/panels';
+import { usePortfolioT } from '@/i18n/portfolio';
+import { getPortfolio, type Portfolio, type PortfolioRow } from '@/actions/portfolio';
+import { OrganisationStrip, ProductStatus, ProductTable } from './PortfolioParts';
 import { useEffect, useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Plus, Trash2, Shield, Folder, Calendar, ChevronRight, ChevronDown,
-  AlertCircle, Settings, LogOut, Lock, ShieldCheck, ShieldAlert, GitCommitHorizontal,
+  AlertCircle, Settings, LogOut, Lock, ShieldCheck, ShieldAlert, GitCommitHorizontal, Building2, LayoutGrid, Table2,
 } from 'lucide-react';
 import { signOut, useSession } from 'next-auth/react';
 import { createProject, deleteProject } from '@/actions/projects';
 import { usePaywallStore } from '@/store/paywallStore';
 import { SetupWizard } from '@/components/Wizard/SetupWizard';
 import { generateDiagram } from '@/components/Wizard/generateDiagram';
+import { addGuidedDraft, addGuidedFacts } from '@/components/Wizard/guidedDraft';
 import type { WizardAnswers } from '@/components/Wizard/generateDiagram';
 import type { Project } from '@/types';
 import { cn } from '@/utils/cn';
@@ -23,13 +28,18 @@ type ProjectWithMeta = Project & {
 
 function ProjectCard({
   project,
+  status,
+  pro,
   onOpen,
   onDelete,
 }: {
   project: ProjectWithMeta;
+  status?: PortfolioRow;
+  pro: boolean;
   onOpen: () => void;
   onDelete: (e: React.MouseEvent) => void;
 }) {
+  const { t } = usePortfolioT();
   const versions = project.versions ?? [];
   const activeVersion = versions.find((v) => v.status === 'active');
   const frozenCount = versions.filter((v) => v.status === 'frozen').length;
@@ -59,7 +69,7 @@ function ProjectCard({
               {frozenCount > 0 && (
                 <span className="shrink-0 flex items-center gap-0.5 rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-700">
                   <Lock size={9} />
-                  {frozenCount} eingefroren
+                  {t.frozen(frozenCount)}
                 </span>
               )}
             </div>
@@ -83,6 +93,8 @@ function ProjectCard({
           <ChevronRight size={14} className="text-[#c8c0b0] group-hover:text-[#1e293b] transition-colors" />
         </div>
       </div>
+
+      {status && <ProductStatus row={status} pro={pro} />}
 
       {/* Version timeline strip */}
       {frozenCount > 0 && (
@@ -118,6 +130,7 @@ interface Props {
 
 export default function ProjectListClient({ initialProjects, canViewSecurity }: Props) {
   const router = useRouter();
+  const { t: pt } = usePanelsT();
   const { data: session } = useSession();
   const isAdmin = (session?.user as { role?: string } | undefined)?.role === 'admin';
   const [isPending, startTransition] = useTransition();
@@ -125,9 +138,22 @@ export default function ProjectListClient({ initialProjects, canViewSecurity }: 
   const [showWizard, setShowWizard] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { t: ptf } = usePortfolioT();
+  const [portfolio, setPortfolio] = useState<Portfolio | null>(null);
+  const [view, setView] = useState<'cards' | 'table'>('cards');
   const showPaywall = usePaywallStore((s) => s.showPaywall);
   void showPaywall;
   const userMenuRef = useRef<HTMLDivElement>(null);
+
+  // The list renders at once; the status of every product fills in when the portfolio has loaded
+  useEffect(() => {
+    getPortfolio().then(setPortfolio).catch(() => {});
+    try { if (localStorage.getItem('crc-list-view') === 'table') setView('table'); } catch { /* storage blocked */ }
+  }, []);
+  const chooseView = (v: 'cards' | 'table') => {
+    setView(v);
+    try { localStorage.setItem('crc-list-view', v); } catch { /* storage blocked */ }
+  };
 
   useEffect(() => {
     if (!showUserMenu) return;
@@ -138,10 +164,10 @@ export default function ProjectListClient({ initialProjects, canViewSecurity }: 
     return () => document.removeEventListener('mousedown', handleClick);
   }, [showUserMenu]);
 
-  const doCreate = (name: string, description: string, nodes?: ReturnType<typeof generateDiagram>['nodes'], edges?: ReturnType<typeof generateDiagram>['edges']) => {
+  const doCreate = (name: string, description: string, nodes?: ReturnType<typeof generateDiagram>['nodes'], edges?: ReturnType<typeof generateDiagram>['edges'], craClass?: WizardAnswers['craClass']) => {
     startTransition(async () => {
       try {
-        const project = await createProject(name, description || undefined, undefined, nodes, edges);
+        const project = await createProject(name, description || undefined, undefined, nodes, edges, craClass);
         router.push(`/diagram/${(project as unknown as { diagrams?: { id: string }[] }).diagrams?.[0]?.id ?? ''}`);
         router.refresh();
       } catch (err) {
@@ -153,7 +179,8 @@ export default function ProjectListClient({ initialProjects, canViewSecurity }: 
   const handleWizardComplete = (answers: WizardAnswers) => {
     const { nodes, edges } = generateDiagram(answers);
     setShowWizard(false);
-    doCreate(answers.projectName, answers.projectDescription, nodes, edges);
+    // Wizard projects start with drafted threats/assets to confirm
+    doCreate(answers.projectName, answers.projectDescription, addGuidedFacts(addGuidedDraft(nodes, answers.systemType), edges), edges, answers.craClass);
   };
 
   const handleWizardSkip = (name: string, description: string) => {
@@ -163,7 +190,7 @@ export default function ProjectListClient({ initialProjects, canViewSecurity }: 
 
   const handleDelete = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!window.confirm('Dieses Projekt und alle Diagramme löschen?')) return;
+    if (!window.confirm(pt.misc.confirmDeleteProject)) return;
     startTransition(async () => {
       try {
         await deleteProject(id);
@@ -209,6 +236,9 @@ export default function ProjectListClient({ initialProjects, canViewSecurity }: 
                 <ShieldCheck size={15} /> <span className="hidden md:inline">Administration</span>
               </button>
             )}
+            <button onClick={() => router.push('/organisation')} className={navBtnClass}>
+              <Building2 size={15} /> <span className="hidden md:inline">{ptf.orgTitle}</span>
+            </button>
             {canViewSecurity && (
               <button onClick={() => router.push('/security')} className={navBtnClass}>
                 <ShieldAlert size={15} /> <span className="hidden md:inline">Security Overview</span>
@@ -285,16 +315,38 @@ export default function ProjectListClient({ initialProjects, canViewSecurity }: 
             </button>
           </div>
         ) : (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {projects.map((project) => (
-              <ProjectCard
-                key={project.id}
-                project={project}
-                onOpen={() => openProject(project)}
-                onDelete={(e) => handleDelete(project.id, e)}
+          <>
+            {portfolio && <OrganisationStrip stations={portfolio.org} />}
+            <div className="mb-4 flex justify-end">
+              <div className="inline-flex rounded-lg border border-[#e5e1d8] bg-white p-0.5">
+                {([['cards', ptf.cards, LayoutGrid], ['table', ptf.table, Table2]] as const).map(([k, text, Icon]) => (
+                  <button key={k} onClick={() => chooseView(k)} className={cn('flex items-center gap-1.5 rounded-md px-3 py-1 text-xs font-medium', view === k ? 'bg-[#1e293b] text-white' : 'text-[#6b6460] hover:bg-[#f4f1ec]')}>
+                    <Icon size={13} />{text}
+                  </button>
+                ))}
+              </div>
+            </div>
+            {view === 'table' && portfolio ? (
+              <ProductTable
+                rows={portfolio.rows.filter((r) => projects.some((p) => p.id === r.projectId))}
+                pro={portfolio.pro}
+                onOpen={(r) => router.push(`/diagram/${r.diagramId ?? ''}`)}
               />
-            ))}
-          </div>
+            ) : (
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {projects.map((project) => (
+                  <ProjectCard
+                    key={project.id}
+                    project={project}
+                    status={portfolio?.rows.find((r) => r.projectId === project.id)}
+                    pro={portfolio?.pro ?? false}
+                    onOpen={() => openProject(project)}
+                    onDelete={(e) => handleDelete(project.id, e)}
+                  />
+                ))}
+              </div>
+            )}
+          </>
         )}
       </main>
     </div>

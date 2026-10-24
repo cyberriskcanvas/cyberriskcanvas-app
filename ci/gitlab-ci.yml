@@ -1,0 +1,37 @@
+# Include in .gitlab-ci.yml:
+#   include:
+#     - remote: https://raw.githubusercontent.com/cyberriskcanvas/cyberriskcanvas-app/main/ci/gitlab-ci.yml
+#
+# Set CI/CD variables: CRC_URL (e.g. https://canvas.example.com) and CRC_TOKEN (masked).
+# Then extend the job and list what to upload:
+#   canvas-evidence:
+#     extends: .crc
+#     variables:
+#       CRC_FILES: "sbom=sbom.cdx.json secrets=secrets.sarif"
+# Release on tag pipelines: set CRC_RELEASE: $CI_COMMIT_TAG in the job variables (freezes the version once the gate passes).
+# Issues for open measures: extend .crc-issues (needs a GITLAB_TOKEN variable with api scope).
+# The gate result shows in the merge request as a JUnit test report. With a GITLAB_TOKEN variable (api scope)
+# it is also posted as a merge request comment in merge request pipelines; set CRC_MR_COMMENT: "false" to turn that off.
+.crc:
+  image: alpine:3
+  variables:
+    CRC_JUNIT: crc-gate.junit.xml
+    CRC_MR_COMMENT: "true"
+  before_script:
+    - apk add --no-cache curl git jq
+  script:
+    # The script is served by your own instance, so it always matches its version.
+    - curl -fsS "$CRC_URL/ci/crc.sh" -o /tmp/crc.sh
+    - sh /tmp/crc.sh $CRC_FILES
+  artifacts:
+    when: always
+    reports:
+      junit: crc-gate.junit.xml
+
+.crc-issues:
+  image: alpine:3
+  before_script:
+    - apk add --no-cache curl jq
+  script:
+    - curl -fsS "$CRC_URL/ci/sync-issues.sh" -o /tmp/sync-issues.sh
+    - sh /tmp/sync-issues.sh

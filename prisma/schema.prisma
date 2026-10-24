@@ -91,6 +91,31 @@ model Project {
   notes              String?
   notesUpdatedByName String?
   notesUpdatedAt     DateTime?
+  // No longer read since 2.0 (one view for everyone); kept so the migration does not drop data.
+  taraMode           String    @default("expert")
+  // Also assess against IEC 62443: Security Level, IEC part, IEC tab per component, IEC page in the PDF.
+  iec62443           Boolean   @default(false)
+  // Release gate threshold: untriaged vulnerabilities and SAST/vulnerability-scan/DAST findings from this severity on
+  // block (critical | high | medium | low). Secrets block on any finding. A pipeline can override it with failOn.
+  gateFailOn         String    @default("high")
+  // CRA product data for the roadmap: class (default | class-i | class-ii | critical, Annex III/IV),
+  // intended purpose (Annex II 4, Annex VII 1a), support period (Art. 13(8), Annex II 7, Annex VII 4)
+  craClass               String?
+  intendedPurpose        String?
+  supportPeriodEnd       DateTime?
+  supportPeriodRationale String?
+  // which end-of-support reminders were sent ("90", "30", "7", "0" = days before); reset when the end date changes
+  supportReminders       Json      @default("{}")
+  // Project-level CRA checklist: requirement id -> { status, note }; takes precedence over node mappings in the SoA
+  craChecklist           Json      @default("{}")
+  // Architecture check findings dismissed with a reason: finding id -> reason
+  modelCheckDismissed    Json      @default("{}")
+  // CRA readiness self-assessment, product-scoped answers: question id -> yes | partly | no | unknown
+  readiness              Json      @default("{}")
+  // Manufacturer, instructions, applied standards and Annex VII entries for the generated documents (src/lib/docData.ts)
+  docData                Json      @default("{}")
+  // BSI TR-03185 SDL checklist: requirement id -> completed
+  sdlChecklist       Json      @default("{}")
   thumbnail   String?
   teamId      String?
   team        Team?   @relation(fields: [teamId], references: [id], onDelete: SetNull)
@@ -106,6 +131,19 @@ model Project {
 
   // Explicit versioning - replaces parentId / branches / lockedAt
   versions ProjectVersion[]
+
+  // CI/CD: pipeline tokens and uploaded scan results
+  ciTokens CiToken[]
+
+  // Reviews of frozen versions by assessors (review team)
+  assessments Assessment[]
+
+  // CRA Art. 14 reporting cases (actively exploited vulnerabilities, severe incidents)
+  craIncidents CraIncident[]
+  ownVulnerabilities OwnVulnerability[]
+
+  // Triage decisions per component and vulnerability; they survive SBOM re-uploads and new versions
+  analyses Analysis[]
 
   // CSAF is global across all versions
   csafDraft      CsafDraft?
@@ -155,6 +193,9 @@ model ProjectVersion {
 
   sboms           ProjectSbom[]
   vulnerabilities ProjectVulnerability[]
+  ciRuns          CiRun[]
+  assessment      Assessment?
+  metrics         MetricSnapshot[]
 
   @@unique([projectId, number])
   @@index([projectId])
@@ -258,6 +299,8 @@ model ProjectSbom {
   // Denormalized for fast project-level access checks
   projectId      String
   fileName       String
+  // CI pipelines of multi-part products (frontend/backend/image) upload one SBOM per part
+  part           String         @default("")
   format         String         // "CycloneDX" | "SPDX"
   componentCount Int            @default(0)
   uploadedAt     DateTime       @default(now())
@@ -265,7 +308,7 @@ model ProjectSbom {
   vulnerabilities ProjectVulnerability[]
   components      ProjectSbomComponent[]
 
-  @@index([versionId])
+  @@index([versionId, part])
   @@index([projectId])
   @@map("project_sboms")
 }
@@ -283,10 +326,21 @@ model ProjectSbomComponent {
   name      String
   version   String?
   purl      String?
+  // Identity of the component across SBOMs and products: purl, else name@version (see componentKey in sbomParse.ts)
+  key       String
+  type      String?
+  cpe       String?
+  supplier  String?
+  // SPDX license ids or expressions as stated in the SBOM
+  licenses  String[]
+  hashes    Json?
+  // Direct dependency of the product; null when the SBOM has no dependency graph
+  direct    Boolean?
   createdAt DateTime    @default(now())
 
   @@index([sbomId])
   @@index([versionId])
+  @@index([key])
   @@map("project_sbom_components")
 }
 
@@ -303,11 +357,20 @@ model ProjectVulnerability {
   summary          String?
   severity         String?        // "CRITICAL" | "HIGH" | "MEDIUM" | "LOW"
   cvssScore        Float?
+  // CVSS v3.x vector from the OSV advisory, exported as CSAF scores/metrics
+  cvssVector       String?
+  // Listed as actively exploited (CISA KEV) while still unresolved: starts an Art. 14 case
+  exploited        Boolean        @default(false)
+  exploitedAt      DateTime?
   componentName    String
   componentVersion String?
   componentPurl    String?
-  status           String         @default("open") // "open" | "in_triage" | "not_affected" | "fixed"
+  status           String         @default("open") // "open" | "in_triage" | "affected" | "not_affected" | "fixed"
   justification    String?
+  // What users can do about it (CSAF remediations): vendor_fix | workaround | mitigation | none_available | no_fix_planned
+  remediationCategory String?
+  remediationDetails  String?
+  remediationUrl      String?
   // Updated on every re-scan that still finds this vuln; lets the security
   // team see which findings were not re-confirmed in the latest run.
   lastSeenAt       DateTime       @default(now())
@@ -318,6 +381,185 @@ model ProjectVulnerability {
   @@index([versionId])
   @@index([projectId])
   @@map("project_vulnerabilities")
+}
+
+// ─── Vulnerability catalogue, matches and triage ─────────────────────────────
+// Matches are global: whether pkg:npm/lodash@4.17.20 is affected by an advisory does not depend on the product.
+// The findings of a version are the join of its components, the matches and the catalogue (src/lib/findings.ts).
+
+// Advisory data copied from OSV. Replaces the in-memory cache and the per-finding copies.
+model Vulnerability {
+  id             String    @id // CVE id, else GHSA id, else the OSV id
+  osvId          String // OSV record the details were loaded from
+  aliases        String[]
+  cveId          String?
+  summary        String?
+  severity       String? // "CRITICAL" | "HIGH" | "MEDIUM" | "LOW" | "NONE"
+  cvssScore      Float?
+  cvssVector     String?
+  cwes           String[]
+  // Versions that fix it, as listed in the advisory
+  fixed          String[]
+  // EPSS (FIRST): probability of exploitation within 30 days, and its percentile
+  epss           Float?
+  epssPercentile Float?
+  // Listed in the CISA KEV catalogue since; known to be exploited in the wild
+  kevAddedAt     DateTime?
+  // When the details were loaded; an advisory modified later is loaded again
+  fetchedAt      DateTime  @default(now())
+
+  matches  VulnerabilityMatch[]
+  analyses Analysis[]
+
+  @@index([osvId])
+  @@index([cveId])
+  @@map("vulnerabilities")
+}
+
+model VulnerabilityMatch {
+  componentKey    String
+  vulnerabilityId String
+  vulnerability   Vulnerability @relation(fields: [vulnerabilityId], references: [id], onDelete: Cascade)
+  firstSeenAt     DateTime      @default(now())
+
+  @@id([componentKey, vulnerabilityId])
+  @@index([vulnerabilityId])
+  @@map("vulnerability_matches")
+}
+
+// The decision of a product team about one vulnerability in one component (CycloneDX VEX analysis).
+// Per product, not per version: a re-upload and the next release keep it.
+model Analysis {
+  id                  String        @id @default(cuid())
+  projectId           String
+  project             Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  componentKey        String
+  vulnerabilityId     String
+  vulnerability       Vulnerability @relation(fields: [vulnerabilityId], references: [id], onDelete: Cascade)
+  status              String        @default("open") // "open" | "in_triage" | "affected" | "not_affected" | "fixed"
+  justification       String?
+  // What users can do about it (CSAF remediations): vendor_fix | workaround | mitigation | none_available | no_fix_planned
+  remediationCategory String?
+  remediationDetails  String?
+  remediationUrl      String?
+  // Accepted noise: neither counted nor blocking
+  suppressed          Boolean       @default(false)
+  updatedByName       String?
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+
+  events AnalysisEvent[]
+
+  @@unique([projectId, componentKey, vulnerabilityId])
+  @@index([vulnerabilityId])
+  @@map("analyses")
+}
+
+// History of an analysis: who changed what, with the comment given.
+model AnalysisEvent {
+  id         String   @id @default(cuid())
+  analysisId String
+  analysis   Analysis @relation(fields: [analysisId], references: [id], onDelete: Cascade)
+  at         DateTime @default(now())
+  actorName  String
+  // field -> [old, new]
+  change     Json
+  comment    String?
+
+  @@index([analysisId])
+  @@map("analysis_events")
+}
+
+// Counts of one version on one day, written by the daily scan and by every SBOM upload (src/lib/metrics.ts).
+// "Open" numbers count unresolved, unsuppressed findings.
+model MetricSnapshot {
+  id                   String         @id @default(cuid())
+  day                  DateTime       @db.Date
+  versionId            String
+  version              ProjectVersion @relation(fields: [versionId], references: [id], onDelete: Cascade)
+  projectId            String
+  critical             Int
+  high                 Int
+  medium               Int
+  low                  Int
+  // unresolved findings in total
+  findings             Int
+  // findings somebody decided on (status other than open)
+  audited              Int
+  suppressed           Int
+  exploited            Int
+  policyFail           Int
+  policyWarn           Int
+  components           Int
+  // components without a versioned purl: cannot be checked
+  unanalysable         Int
+  vulnerableComponents Int
+  riskScore            Int
+
+  @@unique([day, versionId])
+  @@index([projectId, day])
+  @@map("metric_snapshots")
+}
+
+// A rule every product has to follow, checked on the components and findings of each version
+// (src/lib/policy.ts): a forbidden license, a vulnerability that is too severe, a blocked component.
+model Policy {
+  id         String   @id @default(cuid())
+  name       String
+  // What a violation means: "fail" blocks the release gate, "warn" and "info" are shown only
+  violation  String   @default("fail") // "fail" | "warn" | "info"
+  // "any": one condition is enough, "all": every condition must hold
+  operator   String   @default("any") // "any" | "all"
+  // [{ subject, value }], see policy.ts
+  conditions Json     @default("[]")
+  // Products the rule applies to; empty = all
+  projectIds String[]
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  waivers PolicyWaiver[]
+
+  @@map("policies")
+}
+
+// A product team accepts a violation of a rule for one component, with a reason.
+model PolicyWaiver {
+  id           String   @id @default(cuid())
+  policyId     String
+  policy       Policy   @relation(fields: [policyId], references: [id], onDelete: Cascade)
+  projectId    String
+  componentKey String
+  reason       String
+  byName       String
+  createdAt    DateTime @default(now())
+
+  @@unique([policyId, projectId, componentKey])
+  @@map("policy_waivers")
+}
+
+// A vulnerability in the manufacturer's own code (for example reported via CVD): not in any SBOM,
+// published as a CSAF security advisory.
+model OwnVulnerability {
+  id                  String   @id @default(cuid())
+  projectId           String
+  project             Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  title               String
+  cveId               String?
+  cweId               String?
+  cvssVector          String?
+  description         String
+  // Project version numbers the vulnerability affects
+  affectedVersions    Json     @default("[]")
+  status              String   @default("affected") // "affected" | "fixed"
+  remediationCategory String?
+  remediationDetails  String?
+  remediationUrl      String?
+  acknowledgments     String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  @@index([projectId])
+  @@map("own_vulnerabilities")
 }
 
 // Audit trail + overlap lock for the periodic CVE re-scan (triggered by an
@@ -376,12 +618,18 @@ model CsafDraft {
   aggregateSeverity  String   @default("MEDIUM")
   initialReleaseDate DateTime @default(now())
   currentReleaseDate DateTime @default(now())
-  tlp                String   @default("WHITE")
+  tlp                String   @default("CLEAR") // TLP v2: CLEAR | GREEN | AMBER | AMBER+STRICT | RED (mapped to TLP v1 for CSAF 2.0)
   summary            String   @default("")
   details            String   @default("")
   publisherName      String   @default("")
   publisherNamespace String   @default("")
   publisherCategory  String   @default("vendor")
+  // "2.0" (OASIS Standard) or "2.1" (Committee Specification Draft, preview)
+  csafVersion        String   @default("2.0")
+  licenseExpression  String?
+
+  // DEPRECATED: old per-project Art. 14 tracker state, migrated into cra_incidents (kept to avoid a destructive migration)
+  craReporting Json?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -493,4 +741,146 @@ model MeasureEvidence {
   @@index([diagramId, measureId])
   @@index([projectId])
   @@map("measure_evidence")
+}
+
+// Pipeline token scoped to ONE project. Unlike ApiKey (full user access) it only
+// reaches the /api/ci/* endpoints, so it is safe to store as a CI secret.
+model CiToken {
+  id          String    @id @default(cuid())
+  projectId   String
+  project     Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  name        String
+  keyHash     String    @unique // SHA-256 of the full token (hex)
+  prefix      String // first 8 chars after "crci_" for display
+  createdById String?
+  lastUsedAt  DateTime?
+  createdAt   DateTime  @default(now())
+
+  runs CiRun[]
+
+  @@index([projectId])
+  @@map("ci_tokens")
+}
+
+// One uploaded CI result (SBOM or SARIF scan) for a project version.
+model CiRun {
+  id          String         @id @default(cuid())
+  projectId   String
+  versionId   String
+  version     ProjectVersion @relation(fields: [versionId], references: [id], onDelete: Cascade)
+  tokenId     String?
+  token       CiToken?       @relation(fields: [tokenId], references: [id], onDelete: SetNull)
+  source      String // "sbom" | "sast" | "secrets" | "vulnscan"
+  part        String         @default("")
+  result      String // "ok" | "findings"
+  summary     String
+  metrics     Json
+  commit      String?
+  ref         String?
+  url         String?
+  fileName    String
+  storagePath String
+  size        Int
+  sha256      String
+  createdAt   DateTime       @default(now())
+
+  @@index([versionId, source, part, createdAt])
+  @@index([projectId])
+  @@map("ci_runs")
+}
+
+// Organisation-scoped answers of the CRA readiness self-assessment (one row, applies to every product).
+model OrgReadiness {
+  id            String   @id @default("org")
+  answers       Json     @default("{}")
+  updatedByName String?
+  updatedAt     DateTime @updatedAt
+
+  @@map("org_readiness")
+}
+
+// The manufacturer: one row per installation. Publisher profile, vulnerability contact (security.txt,
+// CVD policy), the vulnerability-handling requirements that hold for every product, and the SDL checklist.
+// Products inherit these and may override a requirement (Project.craChecklist wins).
+model Organisation {
+  id                String   @id @default("org")
+  name              String   @default("")
+  publisherName     String?
+  publisherNamespace String?
+  publisherCategory String   @default("vendor") // vendor | coordinator | discoverer | other
+  issuingAuthority  String?
+  contactDetails    String?
+  securityTxt       Json     @default("{}")
+  craChecklist      Json     @default("{}")
+  sdlChecklist      Json     @default("{}")
+  updatedByName     String?
+  updatedAt         DateTime @updatedAt
+
+  @@map("organisation")
+}
+
+// Review of ONE frozen version by an assessor (member of a review team, or admin).
+// The product team's checklist is copied at the start so the review stays stable when the checklist changes later.
+model Assessment {
+  id                String         @id @default(cuid())
+  projectId         String
+  project           Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  versionId         String         @unique
+  version           ProjectVersion @relation(fields: [versionId], references: [id], onDelete: Cascade)
+  assessorId        String
+  assessorName      String
+  status            String         @default("open") // "open" | "approved" | "rejected"
+  summary           String?
+  decidedAt         DateTime?
+  checklistSnapshot Json           @default("{}")
+  createdAt         DateTime       @default(now())
+
+  items AssessmentItem[]
+
+  @@index([projectId])
+  @@map("assessments")
+}
+
+model AssessmentItem {
+  id            String     @id @default(cuid())
+  assessmentId  String
+  assessment    Assessment @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+  requirementId String
+  verdict       String     // "accepted" | "finding" | "not_applicable"
+  comment       String?
+  dueDate       DateTime?
+  response      String?    // answer of the product team to a finding
+  resolved      Boolean    @default(false)
+  updatedAt     DateTime   @updatedAt
+
+  @@unique([assessmentId, requirementId])
+  @@map("assessment_items")
+}
+
+// One Art. 14 reporting case: an actively exploited vulnerability or a severe incident.
+// Deadlines run from awareAt (24 h early warning, 72 h notification); the final report is due
+// 14 days after a corrective measure is available (vulnerability) or one month after the
+// incident notification (incident). Submission itself happens on the ENISA single reporting platform.
+model CraIncident {
+  id                 String    @id @default(cuid())
+  projectId          String
+  project            Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  kind               String    // "vulnerability" | "incident"
+  title              String
+  cveId              String?
+  source             String    @default("manual") // "manual" | "kev"
+  awareAt            DateTime
+  memberStates       String    @default("")
+  measureAvailableAt DateTime? // vulnerability: corrective or mitigating measure available
+  earlyWarningAt     DateTime? // submitted at
+  notificationAt     DateTime?
+  finalReportAt      DateTime?
+  closedAt           DateTime?
+  notes              String?
+  // reminder dedupe: which deadline reminders were already sent ("early", "notification", "final")
+  remindersSent      Json      @default("{}")
+  createdAt          DateTime  @default(now())
+
+  @@index([projectId])
+  @@map("cra_incidents")
 }

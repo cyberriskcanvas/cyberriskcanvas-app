@@ -11,7 +11,7 @@ import {
   type ComplianceStatus,
 } from '@/data/iec62443';
 import { cn } from '@/utils/cn';
-import { AISuggestIEC } from '@/components/AI/AISuggestIEC';
+import { AISuggestIEC } from '@/pro/ui';
 
 const STATUS_OPTS: ComplianceStatus[] = ['compliant', 'partial', 'non-compliant', 'not-applicable'];
 

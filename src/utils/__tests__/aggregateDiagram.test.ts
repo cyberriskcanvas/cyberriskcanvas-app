@@ -282,3 +282,22 @@ describe('aggregateDiagram - IEC 62443 compliance', () => {
     expect(result.globalScore).toBe(100);
   });
 });
+
+import { countDrafts } from '../aggregateDiagram';
+describe('guided drafts', () => {
+  const nodes = [{
+    id: 'n1', type: 'software', position: { x: 0, y: 0 },
+    data: {
+      label: 'API',
+      threats: [{ id: 't1', name: 'Draft', stride: 'S', draft: true }, { id: 't2', name: 'Real', stride: 'T' }],
+      assets: [{ id: 'a1', name: 'A', category: 'data', draft: true }],
+    },
+  }] as unknown as Parameters<typeof aggregateDiagram>[0];
+
+  it('keeps unconfirmed suggestions out of the figures but counts them', () => {
+    const s = aggregateDiagram(nodes);
+    expect(s.threats.map((t) => t.id)).toEqual(['t2']);
+    expect(s.assets).toHaveLength(0);
+    expect(countDrafts(nodes)).toEqual({ threats: 1, assets: 1 });
+  });
+});

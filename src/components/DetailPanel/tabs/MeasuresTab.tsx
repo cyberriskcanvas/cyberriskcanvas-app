@@ -48,14 +48,19 @@ interface Props {
   nodeId: string;
   data: NodeData;
   readOnly?: boolean;
+  /** Scoped to one risk (risk-flow card). `null` = measures that belong to no existing risk. Omitted = all measures. */
+  riskId?: string | null;
 }
 
-export function MeasuresTab({ nodeId, data, readOnly = false }: Props) {
+export function MeasuresTab({ nodeId, data, readOnly = false, riskId: scopedRiskId }: Props) {
+  const scoped = scopedRiskId !== undefined;
   const { updateNodeData } = useDiagramStore();
   const diagramId = useDiagramStore((s) => s.diagramId);
   const projectId = useProjectStore((s) => s.projectId);
-  const measures = (data.measures ?? []) as Measure[];
+  const allMeasures = (data.measures ?? []) as Measure[];
   const risks = (data.risks ?? []) as Risk[];
+  const inScope = (m: Measure) => !scoped || (scopedRiskId === null ? !m.riskId || !risks.some((r) => r.id === m.riskId) : m.riskId === scopedRiskId);
+  const measures = allMeasures.filter(inScope);
   const t = useT();
 
   const STATUS_CONFIG: Record<Measure['status'], { label: string; color: string; dot: string }> = {
@@ -85,7 +90,8 @@ export function MeasuresTab({ nodeId, data, readOnly = false }: Props) {
   const [deletingFileId, setDeletingFileId] = useState<string | null>(null);
   const [, startTransition] = useTransition();
 
-  const save = (updated: Measure[]) => updateNodeData(nodeId, { measures: updated });
+  // a scoped tab only sees its own measures: write them back next to the others
+  const save = (updated: Measure[]) => updateNodeData(nodeId, { measures: scoped ? [...allMeasures.filter((m) => !inScope(m)), ...updated] : updated });
 
   const resetForm = () => {
     setEditingId(null);
@@ -125,7 +131,7 @@ export function MeasuresTab({ nodeId, data, readOnly = false }: Props) {
     const base = {
       title: title.trim(),
       description: description.trim() || undefined,
-      riskId: riskId || undefined,
+      riskId: (scoped ? scopedRiskId : riskId) || undefined,
       owner: owner.trim() || undefined,
       dueDate: dueDate || undefined,
     };
@@ -227,7 +233,7 @@ export function MeasuresTab({ nodeId, data, readOnly = false }: Props) {
         onChange={handleFileSelected}
       />
 
-      {measures.length > 0 && (
+      {!scoped && measures.length > 0 && (
         <div className="grid grid-cols-4 gap-2">
           {(
             [
@@ -254,12 +260,12 @@ export function MeasuresTab({ nodeId, data, readOnly = false }: Props) {
         </div>
       )}
 
-      {measures.length === 0 ? (
+      {measures.length === 0 ? (scoped ? null : (
         <div className="flex flex-col items-center gap-2 py-6 text-center text-[#c8c0b0]">
           <CheckSquare size={28} />
           <p className="text-sm">{t.measures.noMeasures}</p>
         </div>
-      ) : (
+      )) : (
         <div className="space-y-2">
           {measures.map((m) => {
             const cfg = STATUS_CONFIG[m.status];
@@ -441,6 +447,7 @@ export function MeasuresTab({ nodeId, data, readOnly = false }: Props) {
                           id: crypto.randomUUID(),
                           title: tmpl.title,
                           description: tmpl.description,
+                          riskId: (scoped ? scopedRiskId : undefined) || undefined,
                           status: 'open',
                         }]);
                       }}
@@ -464,7 +471,7 @@ export function MeasuresTab({ nodeId, data, readOnly = false }: Props) {
         <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder={t.measures.titlePlaceholder} className={inputClass} />
         <textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder={t.measures.descPlaceholder} rows={2} className="w-full rounded border border-[#e5e1d8] bg-white px-2 py-1.5 text-sm text-[#1a1917] placeholder-[#c8c0b0] focus:border-[#1e293b] focus:outline-none resize-none" />
 
-        {risks.length > 0 && (
+        {!scoped && risks.length > 0 && (
           <select value={riskId} onChange={(e) => setRiskId(e.target.value)} className="w-full rounded border border-[#e5e1d8] bg-white px-2 py-1.5 text-sm text-[#1a1917] focus:border-[#1e293b] focus:outline-none">
             <option value="">{t.measures.linkToRisk}</option>
             {risks.map((r) => <option key={r.id} value={r.id}>{r.level.toUpperCase()} · L{r.likelihood}×I{r.impact}</option>)}

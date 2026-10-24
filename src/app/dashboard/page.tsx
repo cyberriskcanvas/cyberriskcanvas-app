@@ -6,7 +6,7 @@ import { getProjects } from '@/actions/projects';
 import ProjectListClient from '@/components/ProjectList/ProjectListClient';
 
 export const metadata: Metadata = {
-  title: 'My Projects - CyberRisk Canvas',
+  title: 'Products',
   description: 'Manage your cybersecurity risk assessment projects.',
   robots: { index: false, follow: false },
 };

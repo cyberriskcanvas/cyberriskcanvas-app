@@ -1,11 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Zap, Plus, Trash2, ChevronDown, ChevronRight,
   Download, CheckCircle2, XCircle, Circle, FlaskConical,
 } from 'lucide-react';
 import { useDiagramStore } from '@/store/diagramStore';
+import { useProjectStore } from '@/store/projectStore';
+import { effectiveTestStatus, type CiLatest } from '@/lib/ciTestStatus';
 import type { NodeData, Threat, IEC62443Mapping, SecurityTest, SecurityTestStatus } from '@/types';
 import { generateSecurityTests } from '@/data/securityTestMappings';
 import { cn } from '@/utils/cn';
@@ -19,6 +21,12 @@ const STATUS_CONFIG: Record<SecurityTestStatus, { label: string; color: string; 
 };
 
 const inputClass = 'w-full rounded border border-[#e5e1d8] bg-white px-2 py-1.5 text-sm text-[#1a1917] placeholder-[#c8c0b0] focus:border-[#1e293b] focus:outline-none';
+const CI_SOURCES: { value: NonNullable<SecurityTest['ciSource']>; label: string }[] = [
+  { value: 'sbom', label: 'SBOM' }, { value: 'sast', label: 'SAST' },
+  { value: 'secrets', label: 'Secrets' }, { value: 'vulnscan', label: 'Vulnerability scan' },
+  { value: 'dast', label: 'DAST' }, { value: 'tls', label: 'TLS test' }, { value: 'ports', label: 'Port scan' },
+];
+
 const inactiveBtn = 'bg-[#f4f1ec] text-[#6b6460] hover:bg-[#e5e1d8]';
 const outlineBtn = 'flex items-center gap-1.5 rounded border border-[#e5e1d8] bg-white px-3 py-1.5 text-xs font-medium text-[#6b6460] hover:bg-[#f4f1ec] hover:text-[#1a1917]';
 
@@ -41,6 +49,19 @@ export function SecurityTestsTab({ nodeId, data }: Props) {
   const [formSteps, setFormSteps] = useState('');
   const [formExpected, setFormExpected] = useState('');
 
+  // Newest CI run per source/part: linked tests take their status from it
+  const projectId = useProjectStore((st) => st.projectId);
+  const [ciLatest, setCiLatest] = useState<CiLatest[]>([]);
+  const hasLinked = tests.some((t) => t.ciSource);
+  useEffect(() => {
+    if (!projectId || !hasLinked) return;
+    fetch(`/api/projects/${projectId}/ci/runs`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d: { latest?: CiLatest[] } | null) => setCiLatest(d?.latest ?? []))
+      .catch(() => {});
+  }, [projectId, hasLinked]);
+  const statusOf = (t: SecurityTest) => effectiveTestStatus(t, ciLatest);
+
   const save = (updated: SecurityTest[]) => updateNodeData(nodeId, { securityTests: updated });
 
   const handleGenerate = () => {
@@ -55,6 +76,9 @@ export function SecurityTestsTab({ nodeId, data }: Props) {
 
   const updateStatus = (id: string, status: SecurityTestStatus) =>
     save(tests.map((t) => (t.id === id ? { ...t, status } : t)));
+
+  const linkCi = (id: string, ciSource: SecurityTest['ciSource']) =>
+    save(tests.map((t) => (t.id === id ? { ...t, ciSource } : t)));
 
   const remove = (id: string) => save(tests.filter((t) => t.id !== id));
 
@@ -77,7 +101,7 @@ export function SecurityTestsTab({ nodeId, data }: Props) {
     const lines = [
       `# Security Test Specification – ${component}`, '',
       `Generated: ${new Date().toISOString().slice(0, 10)}  `,
-      `Total: ${tests.length} | Passed: ${tests.filter((t) => t.status === 'passed').length} | Failed: ${tests.filter((t) => t.status === 'failed').length}`,
+      `Total: ${tests.length} | Passed: ${tests.filter((t) => statusOf(t) === 'passed').length} | Failed: ${tests.filter((t) => statusOf(t) === 'failed').length}`,
       '', '---', '',
     ];
     tests.forEach((t, i) => {
@@ -98,7 +122,7 @@ export function SecurityTestsTab({ nodeId, data }: Props) {
     const esc = (s: string) => `"${s.replace(/"/g, '""')}"`;
     const header = ['ID', 'Title', 'Status', 'IEC Req.', 'Precondition', 'Steps', 'Expected'];
     const rows = tests.map((t, i) => [
-      `ST-${String(i + 1).padStart(3, '0')}`, t.title, STATUS_CONFIG[t.status].label,
+      `ST-${String(i + 1).padStart(3, '0')}`, t.title, STATUS_CONFIG[statusOf(t)].label,
       t.requirementId ?? '', t.precondition, t.testSteps.join(' | '), t.expectedResult,
     ].map(esc).join(','));
     const blob = new Blob([[header.map(esc).join(','), ...rows].join('\n')], { type: 'text/csv' });
@@ -110,9 +134,9 @@ export function SecurityTestsTab({ nodeId, data }: Props) {
 
   const stats = {
     total: tests.length,
-    passed: tests.filter((t) => t.status === 'passed').length,
-    failed: tests.filter((t) => t.status === 'failed').length,
-    untested: tests.filter((t) => t.status === 'untested').length,
+    passed: tests.filter((t) => statusOf(t) === 'passed').length,
+    failed: tests.filter((t) => statusOf(t) === 'failed').length,
+    untested: tests.filter((t) => statusOf(t) === 'untested').length,
   };
 
   return (
@@ -194,7 +218,7 @@ export function SecurityTestsTab({ nodeId, data }: Props) {
       {tests.length > 0 && (
         <div className="space-y-2">
           {tests.map((t, i) => {
-            const cfg = STATUS_CONFIG[t.status];
+            const cfg = STATUS_CONFIG[statusOf(t)];
             const Icon = cfg.icon;
             const isExpanded = expandedId === t.id;
             const label = `ST-${String(i + 1).padStart(3, '0')}`;
@@ -242,14 +266,25 @@ export function SecurityTestsTab({ nodeId, data }: Props) {
                       <p className="text-[10px] font-bold uppercase tracking-widest text-[#6b6460] mb-1">Expected Result</p>
                       <p className="text-xs text-[#1a1917]">{t.expectedResult}</p>
                     </div>
-                    <div className="flex items-center justify-between">
-                      <div className="flex gap-1">
-                        {(Object.keys(STATUS_CONFIG) as SecurityTestStatus[]).map((s) => (
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex flex-wrap items-center gap-1">
+                        {t.ciSource ? (
+                          <span className="text-[10px] text-[#6b6460]">Status comes from the latest CI run</span>
+                        ) : (Object.keys(STATUS_CONFIG) as SecurityTestStatus[]).map((s) => (
                           <button key={s} onClick={() => updateStatus(t.id, s)}
                             className={cn('rounded px-2 py-0.5 text-[10px] font-medium transition-all', t.status === s ? STATUS_CONFIG[s].color : inactiveBtn)}>
                             {STATUS_CONFIG[s].label}
                           </button>
                         ))}
+                        <select
+                          value={t.ciSource ?? ''}
+                          onChange={(e) => linkCi(t.id, (e.target.value || undefined) as SecurityTest['ciSource'])}
+                          className="rounded border border-[#e5e1d8] bg-white px-1.5 py-0.5 text-[10px] text-[#6b6460]"
+                          title="Link this test to a CI check"
+                        >
+                          <option value="">Manual</option>
+                          {CI_SOURCES.map((c) => <option key={c.value} value={c.value}>CI: {c.label}</option>)}
+                        </select>
                       </div>
                       <button onClick={() => remove(t.id)} className="text-[#c8c0b0] hover:text-red-600">
                         <Trash2 size={13} />

@@ -1,129 +1,68 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { Joyride, STATUS, EVENTS, type EventData, type Controls, type Step } from 'react-joyride';
 import { useDiagramStore } from '@/store/diagramStore';
 import { useTourStore } from '@/store/tourStore';
+import { getTourT, useTourT } from '@/i18n/tour';
 
 const STORAGE_KEY = 'cyberrisk_tour_done';
 const TOUR_NODE_ID = '__tour_demo__';
 
-// Step index → detail panel tab mapping (steps 1–4 = indices 1–4)
+// Step index → detail panel tab mapping: threats, rating and measures all live in the risks tab
 const STEP_TAB: Record<number, string> = {
-  1: 'threats',
-  2: 'iec62443',
+  1: 'risks',
+  2: 'risks',
   3: 'risks',
-  4: 'measures',
 };
 
-const STEPS: Step[] = [
-  {
-    target: '[data-tour="canvas"]',
-    placement: 'center',
-    skipBeacon: true,
-    title: 'Schritt 1: Das System zeichnen',
-    content: (
-      <div style={{ textAlign: 'left', lineHeight: '1.6' }}>
-        <p style={{ marginBottom: 6 }}><strong>Was siehst du hier?</strong> Eine große Zeichenfläche und eine Leiste mit Bauteilen.</p>
-        <p style={{ marginBottom: 6 }}><strong>Wozu ist es gedacht?</strong> Hier baust du dein technisches System nach. Du machst sichtbar, wie Bauteile kommunizieren.</p>
-        <p style={{ marginBottom: 6 }}><strong>Was muss getan werden?</strong> Ziehe die Boxen auf die Fläche und verbinde sie mit Linien.</p>
-        <p style={{ color: '#6b6460', fontSize: 12, fontStyle: 'italic', margin: 0 }}>Beispiel: Du planst ein smartes Garagentor. Ziehe die Box „Motor" und „Handy-App" auf die Fläche. Verbinde beide.</p>
-      </div>
-    ),
-  },
-  {
-    target: '[data-tour="threats-list"]',
-    placement: 'left',
-    skipBeacon: true,
-    beforeTimeout: 500,
-    title: 'Schritt 2: Schwachstellen finden',
-    content: (
-      <div style={{ textAlign: 'left', lineHeight: '1.6' }}>
-        <p style={{ marginBottom: 6 }}><strong>Was siehst du hier?</strong> Eine Liste für Bedrohungen.</p>
-        <p style={{ marginBottom: 6 }}><strong>Wozu ist es gedacht?</strong> Hier trägst du ein, wo dein System angreifbar ist.</p>
-        <p style={{ marginBottom: 6 }}><strong>Was muss getan werden?</strong> Klicke auf ein Bauteil. Überlege, was schiefgehen kann, und schreibe die Schwachstelle auf.</p>
-        <p style={{ color: '#6b6460', fontSize: 12, fontStyle: 'italic', margin: 0 }}>Beispiel: Das Signal der Funkverbindung hat kein Passwort. Jemand könnte es abfangen.</p>
-      </div>
-    ),
-  },
-  {
-    target: '[data-tour="iec-dropdown"]',
-    placement: 'left',
-    skipBeacon: true,
-    beforeTimeout: 300,
-    title: 'Schritt 3: Die Norm IEC 62443 anwenden',
-    content: (
-      <div style={{ textAlign: 'left', lineHeight: '1.6' }}>
-        <p style={{ marginBottom: 6 }}><strong>Was siehst du hier?</strong> Ein Auswahlfeld für „IEC 62443" und das „Security Level".</p>
-        <p style={{ marginBottom: 6 }}><strong>Wozu ist es gedacht?</strong> Damit zeigst du, dass du dich an offizielle Regeln hältst.</p>
-        <p style={{ marginBottom: 6 }}><strong>Was muss getan werden?</strong> Wähle für deine Schwachstelle die passende Regel aus. Lege fest, wie stark der Schutz sein muss.</p>
-        <p style={{ color: '#6b6460', fontSize: 12, fontStyle: 'italic', margin: 0 }}>Beispiel: Die Norm fordert eine Anmeldung. Du wählst diese Regel für deine App aus.</p>
-      </div>
-    ),
-  },
-  {
-    target: '[data-tour="risk-matrix"]',
-    placement: 'left',
-    skipBeacon: true,
-    beforeTimeout: 300,
-    title: 'Schritt 4: Das Risiko bewerten',
-    content: (
-      <div style={{ textAlign: 'left', lineHeight: '1.6' }}>
-        <p style={{ marginBottom: 6 }}><strong>Was siehst du hier?</strong> Die Risiko-Matrix. Das ist ein Raster mit grünen, gelben und roten Feldern.</p>
-        <p style={{ marginBottom: 6 }}><strong>Wozu ist es gedacht?</strong> Hier ordnest du ein, wie gefährlich eine Schwachstelle wirklich ist.</p>
-        <p style={{ marginBottom: 6 }}><strong>Was muss getan werden?</strong> Wie leicht ist der Angriff? Wie groß ist der Schaden? Klicke auf das passende Feld.</p>
-        <p style={{ color: '#6b6460', fontSize: 12, fontStyle: 'italic', margin: 0 }}>Beispiel: Leicht zu öffnen und hoher Schaden. Du wählst ein rotes Feld.</p>
-      </div>
-    ),
-  },
-  {
-    target: '[data-tour="measures-tracker"]',
-    placement: 'left',
-    skipBeacon: true,
-    beforeTimeout: 300,
-    title: 'Schritt 5: Das Problem lösen',
-    content: (
-      <div style={{ textAlign: 'left', lineHeight: '1.6' }}>
-        <p style={{ marginBottom: 6 }}><strong>Was siehst du hier?</strong> Den Maßnahmen-Tracker.</p>
-        <p style={{ marginBottom: 6 }}><strong>Wozu ist es gedacht?</strong> Hier planst du den Schutz für dein System.</p>
-        <p style={{ marginBottom: 6 }}><strong>Was muss getan werden?</strong> Schreibe eine Lösung auf. Wähle eine Person aus. Setze den Status auf „in Arbeit".</p>
-        <p style={{ color: '#6b6460', fontSize: 12, fontStyle: 'italic', margin: 0 }}>Beispiel: „Die App muss ein Passwort abfragen." Danach rutscht das Risiko in den grünen Bereich.</p>
-      </div>
-    ),
-  },
-  {
-    target: '[data-tour="export-btn"]',
-    placement: 'bottom',
-    skipBeacon: true,
-    title: 'Schritt 6: Den Bericht erstellen',
-    content: (
-      <div style={{ textAlign: 'left', lineHeight: '1.6' }}>
-        <p style={{ marginBottom: 6 }}><strong>Was siehst du hier?</strong> Den Knopf „PDF-Bericht exportieren".</p>
-        <p style={{ marginBottom: 6 }}><strong>Wozu ist es gedacht?</strong> Das fasst deine Zeichnung und Risiken zusammen. Das ist dein Nachweis.</p>
-        <p style={{ marginBottom: 6 }}><strong>Was muss getan werden?</strong> Klicke auf den Knopf und speichere die Datei.</p>
-        <p style={{ fontWeight: 600, color: '#1a1917', margin: 0 }}>Du bist fertig.</p>
-      </div>
-    ),
-  },
+const STEP_PROPS: Pick<Step, 'target' | 'placement' | 'beforeTimeout'>[] = [
+  { target: '[data-tour="canvas"]', placement: 'center' },
+  { target: '[data-tour="threats-list"]', placement: 'left', beforeTimeout: 500 },
+  { target: '[data-tour="risk-matrix"]', placement: 'left', beforeTimeout: 300 },
+  { target: '[data-tour="measures-tracker"]', placement: 'left', beforeTimeout: 300 },
+  { target: '[data-tour="export-btn"]', placement: 'bottom' },
 ];
+
+function buildSteps(t: ReturnType<typeof getTourT>): Step[] {
+  const p = { marginBottom: 6 } as const;
+  return STEP_PROPS.map((props, i) => {
+    const st = t.steps[i];
+    return {
+      ...props,
+      skipBeacon: true,
+      title: st.title,
+      content: (
+        <div style={{ textAlign: 'left', lineHeight: '1.6' }}>
+          <p style={p}><strong>{t.labels.see}</strong> {st.see}</p>
+          <p style={p}><strong>{t.labels.why}</strong> {st.why}</p>
+          <p style={p}><strong>{t.labels.todo}</strong> {st.todo}</p>
+          {st.example && <p style={{ color: '#6b6460', fontSize: 12, fontStyle: 'italic', margin: 0 }}>{st.example}</p>}
+          {st.done && <p style={{ fontWeight: 600, color: '#1a1917', margin: 0 }}>{st.done}</p>}
+        </div>
+      ),
+    };
+  });
+}
 
 interface Props {
   userId: string;
+  /** The tour points at the canvas: it only runs while the canvas (Design tab) is shown. */
+  active: boolean;
 }
 
-export function OnboardingTour({ userId }: Props) {
+/** Lets the tour start again the next time the canvas is shown. */
+export function resetOnboardingTour(userId: string) {
+  try { localStorage.removeItem(`${STORAGE_KEY}_${userId}`); } catch { /* storage blocked: the tour shows anyway */ }
+}
+
+export function OnboardingTour({ userId, active }: Props) {
   const storageKey = `${STORAGE_KEY}_${userId}`;
   const [run, setRun] = useState(false);
+  const t = useTourT();
+  const steps = useMemo(() => buildSteps(t), [t]);
   const { selectNode, addNode, deleteNode, closeDetailPanel } = useDiagramStore();
   const { setPanelTab } = useTourStore();
-
-  useEffect(() => {
-    const done = localStorage.getItem(storageKey);
-    if (!done) {
-      const timer = setTimeout(() => setRun(true), 800);
-      return () => clearTimeout(timer);
-    }
-  }, [storageKey]);
 
   const cleanup = useCallback(() => {
     closeDetailPanel();
@@ -133,6 +72,20 @@ export function OnboardingTour({ userId }: Props) {
       deleteNode(TOUR_NODE_ID);
     }
   }, [closeDetailPanel, deleteNode, setPanelTab]);
+
+  // Start the first time the canvas is shown; stop (without marking it done) when the user leaves the canvas
+  useEffect(() => {
+    if (!active) {
+      setRun(false);
+      cleanup();
+      return;
+    }
+    let done = false;
+    try { done = !!localStorage.getItem(storageKey); } catch { /* storage blocked: show the tour */ }
+    if (done) return;
+    const timer = setTimeout(() => setRun(true), 800);
+    return () => clearTimeout(timer);
+  }, [active, storageKey, cleanup]);
 
   const openPanelForStep = useCallback((index: number) => {
     const tab = STEP_TAB[index];
@@ -150,14 +103,14 @@ export function OnboardingTour({ userId }: Props) {
           id: TOUR_NODE_ID,
           type: 'hardware',
           position: { x: 160, y: 120 },
-          data: { label: 'Demo-Bauteil', componentType: 'ecu' },
+          data: { label: t.demoNode, componentType: 'ecu' },
         });
       }
       selectNode(TOUR_NODE_ID);
     }
 
     setPanelTab(tab);
-  }, [selectNode, addNode, setPanelTab]);
+  }, [selectNode, addNode, setPanelTab, t.demoNode]);
 
   const handleEvent = useCallback((data: EventData, _controls: Controls) => {
     const { status, type, index } = data;
@@ -181,7 +134,7 @@ export function OnboardingTour({ userId }: Props) {
 
   return (
     <Joyride
-      steps={STEPS}
+      steps={steps}
       run={run}
       continuous
       scrollToFirstStep={false}
@@ -200,13 +153,7 @@ export function OnboardingTour({ userId }: Props) {
         zIndex: 10000,
         spotlightRadius: 8,
       }}
-      locale={{
-        back: 'Zurück',
-        close: 'Schließen',
-        last: 'Fertig',
-        next: 'Weiter',
-        skip: 'Tour überspringen',
-      }}
+      locale={t.locale}
       styles={{
         tooltip: {
           borderRadius: '12px',

@@ -16,10 +16,12 @@ function formatBytes(b: number): string {
 
 interface Props {
   projectId: string;
-  onClose: () => void;
+  /** Side panel with a close button; without it the list is embedded in a page (documents tab). */
+  onClose?: () => void;
 }
 
 export function DocumentsPanel({ projectId, onClose }: Props) {
+  const embedded = !onClose;
   const t = useT();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [docs, setDocs] = useState<DocumentMeta[]>([]);
@@ -94,7 +96,7 @@ export function DocumentsPanel({ projectId, onClose }: Props) {
   const downloadUrl = (id: string) => `/api/documents/${id}?download=1`;
 
   return (
-    <div className="flex h-full w-[340px] shrink-0 flex-col border-l border-[#e5e1d8] bg-white">
+    <div className={embedded ? 'flex flex-col rounded-xl border border-[#e5e1d8] bg-white' : 'flex h-full w-[340px] shrink-0 flex-col border-l border-[#e5e1d8] bg-white'}>
       {/* Header */}
       <div className="flex items-center justify-between border-b border-[#e5e1d8] px-4 py-3">
         <div className="flex items-center gap-2 text-sm font-semibold text-[#1a1917]">
@@ -104,9 +106,11 @@ export function DocumentsPanel({ projectId, onClose }: Props) {
             {docs.length}
           </span>
         </div>
-        <button onClick={onClose} className="flex h-7 w-7 items-center justify-center rounded-lg text-[#c8c0b0] hover:bg-[#f4f1ec] hover:text-[#1a1917] transition-colors">
-          <X size={14} />
-        </button>
+        {onClose && (
+          <button onClick={onClose} className="flex h-7 w-7 items-center justify-center rounded-lg text-[#c8c0b0] hover:bg-[#f4f1ec] hover:text-[#1a1917] transition-colors">
+            <X size={14} />
+          </button>
+        )}
       </div>
 
       {/* Error banner */}

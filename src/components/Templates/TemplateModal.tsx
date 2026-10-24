@@ -1,5 +1,6 @@
 'use client';
 
+import { usePanelsT } from '@/i18n/panels';
 import { useState } from 'react';
 import { X, Layers, Car, Wifi, Cloud, HelpCircle, AlertTriangle, Database, Activity, ShieldCheck, ChevronDown, ChevronUp, Factory } from 'lucide-react';
 import { TEMPLATES, type Template } from '@/data/templates';
@@ -313,6 +314,7 @@ function assignParentsFromPosition(
 }
 
 export function TemplateModal({ onClose }: Props) {
+  const { t: pt } = usePanelsT();
   const { nodes, edges, setNodes, setEdges } = useDiagramStore();
   const [selected, setSelected] = useState<Template | null>(null);
   const [mode, setMode] = useState<'replace' | 'append'>('append');
@@ -364,11 +366,11 @@ export function TemplateModal({ onClose }: Props) {
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setShowHelp(true)}
-                title="Felder erklären"
+                title={pt.tpl.explain}
                 className="flex items-center gap-1 rounded-lg border border-gray-200 px-2.5 py-1.5 text-xs text-gray-500 hover:border-indigo-300 hover:text-indigo-600 transition-colors"
               >
                 <HelpCircle size={13} />
-                <span>Felder erklären</span>
+                <span>{pt.tpl.explain}</span>
               </button>
               <button onClick={onClose} className="rounded-lg p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600">
                 <X size={18} />
@@ -378,8 +380,7 @@ export function TemplateModal({ onClose }: Props) {
 
           {/* Info banner */}
           <div className="border-b border-gray-100 bg-indigo-50 px-5 py-2.5 text-[11px] text-indigo-600">
-            Jedes Template enthält vorausgefüllte Beispiel-Assets, STRIDE-Bedrohungen und Risiken.
-            Klicke ein Template an, um eine Vorschau zu sehen – und passe die Daten danach in der Detail-Ansicht an.
+            {pt.tpl.info}
           </div>
 
           {/* Templates - grouped by category */}
@@ -456,7 +457,7 @@ export function TemplateModal({ onClose }: Props) {
           {/* Footer */}
           <div className="flex items-center justify-between border-t border-gray-100 px-5 py-4">
             <div className="flex items-center gap-3">
-              <span className="text-xs text-gray-500">Modus:</span>
+              <span className="text-xs text-gray-500">{pt.tpl.mode}</span>
               {(['append', 'replace'] as const).map((m) => (
                 <button
                   key={m}
@@ -465,22 +466,22 @@ export function TemplateModal({ onClose }: Props) {
                     'rounded px-2.5 py-1 text-xs font-medium transition-colors',
                     mode === m ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200',
                   )}
-                  title={m === 'replace' ? 'Löscht alle vorhandenen Elemente auf der Canvas' : 'Fügt das Template neben vorhandenen Elementen ein'}
+                  title={m === 'replace' ? pt.tpl.replaceTip : pt.tpl.appendTip}
                 >
-                  {m === 'append' ? 'Zur Canvas hinzufügen' : 'Canvas ersetzen'}
+                  {m === 'append' ? pt.tpl.append : pt.tpl.replace}
                 </button>
               ))}
             </div>
             <div className="flex gap-2">
               <button onClick={onClose} className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
-                Abbrechen
+                {pt.tpl.cancel}
               </button>
               <button
                 onClick={apply}
                 disabled={!selected}
                 className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-40"
               >
-                Template laden
+                {pt.tpl.load}
               </button>
             </div>
           </div>

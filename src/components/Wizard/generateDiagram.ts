@@ -12,6 +12,8 @@ export interface WizardAnswers {
   connections: ConnectionType[];
   storage: StorageType;
   boundaries: BoundaryType[];
+  /** CRA product class from the Annex III/IV step (saved on the project). */
+  craClass?: 'default' | 'class-i' | 'class-ii' | 'critical';
 }
 
 interface NodeSpec {

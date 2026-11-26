@@ -196,6 +196,9 @@ model ProjectVersion {
   ciRuns          CiRun[]
   assessment      Assessment?
   metrics         MetricSnapshot[]
+  // Diagram snapshots taken at freeze. NoAction (checked at end of statement): a frozen version row cannot be
+  // deleted on its own while snapshots point at it, but deleting the whole project still cascades.
+  diagramSnapshots DiagramVersion[]
 
   @@unique([projectId, number])
   @@index([projectId])
@@ -231,9 +234,13 @@ model DiagramVersion {
   edges     Json
   viewport  Json
   message   String?
+  // Set for freeze snapshots. These are audit artifacts: never pruned, never listed past the limit.
+  projectVersionId String?
+  projectVersion   ProjectVersion? @relation(fields: [projectVersionId], references: [id], onDelete: NoAction)
   createdAt DateTime @default(now())
 
   @@index([diagramId])
+  @@index([projectVersionId])
   @@map("diagram_versions")
 }
 

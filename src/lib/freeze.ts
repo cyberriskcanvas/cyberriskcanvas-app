@@ -14,6 +14,7 @@ export async function freezeActiveVersion(opts: { projectId: string; label: stri
       tx.diagramVersion.create({
         data: {
           diagramId: d.id,
+          projectVersionId: active.id,
           userId: opts.userId ?? null,
           nodes: d.nodes as object,
           edges: d.edges as object,

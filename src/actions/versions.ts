@@ -41,7 +41,7 @@ export async function createVersion(
   const session = await requireSession();
   await assertDiagramWriteAccess(diagramId, session.user.id);
 
-  const diagram = await prisma.diagram.findUnique({ where: { id: diagramId } });
+  const diagram = await prisma.diagram.findUnique({ where: { id: diagramId, deletedAt: null } });
   if (!diagram) throw new Error('Diagram not found');
 
   const version = await prisma.diagramVersion.create({
@@ -85,7 +85,7 @@ export async function restoreVersion(diagramId: string, versionId: string) {
   const version = await prisma.diagramVersion.findFirst({ where: { id: versionId, diagramId } });
   if (!version) throw new Error('Version not found');
 
-  const current = await prisma.diagram.findUnique({ where: { id: diagramId } });
+  const current = await prisma.diagram.findUnique({ where: { id: diagramId, deletedAt: null } });
   if (current) {
     await prisma.diagramVersion.create({
       data: {

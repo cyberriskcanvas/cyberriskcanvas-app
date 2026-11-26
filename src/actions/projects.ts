@@ -90,8 +90,8 @@ export async function getProjects() {
     where: ids !== null ? { id: { in: ids } } : undefined,
     orderBy: { updatedAt: 'desc' },
     include: {
-      _count: { select: { diagrams: true } },
-      diagrams: { select: { id: true }, orderBy: { createdAt: 'asc' }, take: 1 },
+      _count: { select: { diagrams: { where: { deletedAt: null } } } },
+      diagrams: { where: { deletedAt: null }, select: { id: true }, orderBy: { createdAt: 'asc' }, take: 1 },
       team: { select: { id: true, name: true } },
       versions: {
         orderBy: { number: 'desc' },
@@ -113,6 +113,7 @@ export async function getProject(id: string) {
     where,
     include: {
       diagrams: {
+        where: { deletedAt: null },
         orderBy: { createdAt: 'asc' },
         select: { id: true, name: true, projectId: true, createdAt: true, updatedAt: true },
       },

@@ -215,12 +215,15 @@ model Diagram {
   viewport  Json     @default("{\"x\":0,\"y\":0,\"zoom\":1}")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  // Soft delete: a hard delete would cascade to diagram_versions and take freeze snapshots with it.
+  deletedAt DateTime?
 
   versions        DiagramVersion[]
   sbomComponents  SbomComponent[]
   measureEvidence MeasureEvidence[]
 
   @@index([projectId])
+  @@index([projectId, deletedAt])
   @@map("diagrams")
 }
 

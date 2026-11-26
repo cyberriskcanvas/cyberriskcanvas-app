@@ -56,7 +56,7 @@ export async function getPortfolio(): Promise<Portfolio> {
       select: {
         id: true, name: true, craClass: true, modelCheckDismissed: true, gateFailOn: true,
         team: { select: { name: true } },
-        diagrams: { select: { id: true, nodes: true, edges: true }, orderBy: { createdAt: 'asc' }, take: 1 },
+        diagrams: { where: { deletedAt: null }, select: { id: true, nodes: true, edges: true }, orderBy: { createdAt: 'asc' }, take: 1 },
         versions: { orderBy: { number: 'desc' }, select: { id: true, number: true, label: true, status: true } },
       },
     }),

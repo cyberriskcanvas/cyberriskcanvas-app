@@ -42,6 +42,15 @@ export async function bufferDiagram(id: string, patch: DiagramPatch, userId: str
   }
 }
 
+/** Drops buffered edits of a diagram without writing them, e.g. when the diagram is deleted. */
+export async function discardDiagramBuffer(id: string): Promise<void> {
+  try {
+    await redis.pipeline().del(`diagram:${id}`).srem(DIRTY_SET, id).exec();
+  } catch {
+    // Redis unavailable - nothing buffered
+  }
+}
+
 export async function flushDiagram(id: string): Promise<void> {
   const key = `diagram:${id}`;
   try {

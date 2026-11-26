@@ -9,7 +9,7 @@ export async function freezeActiveVersion(opts: { projectId: string; label: stri
   if (!active) throw new Error('No active version found for this project.');
 
   return prisma.$transaction(async (tx) => {
-    const diagrams = await tx.diagram.findMany({ where: { projectId }, select: { id: true, nodes: true, edges: true, viewport: true } });
+    const diagrams = await tx.diagram.findMany({ where: { projectId, deletedAt: null }, select: { id: true, nodes: true, edges: true, viewport: true } });
     await Promise.all(diagrams.map((d) =>
       tx.diagramVersion.create({
         data: {

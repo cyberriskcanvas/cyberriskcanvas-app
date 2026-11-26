@@ -31,7 +31,7 @@ export function registerCollaboration(io: Server): void {
     socket.on('join-diagram', async ({ diagramId }: { diagramId: string }) => {
       if (typeof diagramId !== 'string' || !diagramId) return;
 
-      const diagram = await prisma.diagram.findUnique({ where: { id: diagramId }, select: { projectId: true } });
+      const diagram = await prisma.diagram.findUnique({ where: { id: diagramId, deletedAt: null }, select: { projectId: true } });
       const accessible = diagram ? await canAccessProject(diagram.projectId, userId) : false;
       if (!accessible) {
         socket.emit('error', { message: 'Access denied' });

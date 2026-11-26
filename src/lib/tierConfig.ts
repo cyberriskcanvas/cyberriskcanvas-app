@@ -19,10 +19,6 @@ export interface TierConfig {
   approvalWorkflow: boolean;
   sso: boolean;
   customFrameworks: boolean;
-  /** Maximum number of projects. null = unlimited. */
-  maxProjects: number | null;
-  /** Maximum number of non-boundary nodes per diagram. null = unlimited. */
-  maxNodes: number | null;
 }
 
 export const TIER_CONFIG: Record<Tier, TierConfig> = {
@@ -45,8 +41,6 @@ export const TIER_CONFIG: Record<Tier, TierConfig> = {
     approvalWorkflow: false,
     sso: false,
     customFrameworks: false,
-    maxProjects: 3,
-    maxNodes: 30,
   },
   pro: {
     realtimeCollab: true,
@@ -67,7 +61,5 @@ export const TIER_CONFIG: Record<Tier, TierConfig> = {
     approvalWorkflow: true,
     sso: true,
     customFrameworks: true,
-    maxProjects: null,
-    maxNodes: null,
   },
 };

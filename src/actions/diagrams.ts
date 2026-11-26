@@ -3,7 +3,6 @@
 import { requireSession } from '@/lib/auth';
 import { bufferDiagram, discardDiagramBuffer } from '@/lib/redis';
 import { assertDiagramAccess, assertDiagramWriteAccess, assertProjectWriteAccess } from '@/lib/access';
-import { getTierLimit, TierError } from '@/lib/tierGuard';
 import { prisma } from '@/lib/db';
 
 export async function getDiagram(id: string) {
@@ -32,20 +31,6 @@ export async function saveDiagram(
     });
     if (activeVersion?.status === 'frozen') {
       throw new Error(`Version ${activeVersion.number}${activeVersion.label ? ` (${activeVersion.label})` : ''} is frozen. Create a new version to make changes.`);
-    }
-  }
-
-  if (Array.isArray(data.nodes)) {
-    const maxNodes = await getTierLimit('maxNodes');
-    if (maxNodes !== null) {
-      const count = (data.nodes as Array<{ type?: string }>).filter(
-        (n) => n?.type !== 'boundary',
-      ).length;
-      if (count > maxNodes) {
-        throw new TierError(
-          `Your license is limited to ${maxNodes} components per diagram. Upgrade to a Pro license to add more.`,
-        );
-      }
     }
   }
 

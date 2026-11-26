@@ -2,8 +2,6 @@ import type { Metadata } from 'next';
 import { auth } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import { listUsers } from '@/actions/auth';
-import { getLicenseInfo } from '@/lib/license';
-import { getLicenseKeyPreview } from '@/actions/license';
 import { getTier } from '@/lib/tierLimits';
 import { TIER_CONFIG } from '@/lib/tierConfig';
 import { listAlertChannels } from '@/pro/server';
@@ -23,10 +21,8 @@ export default async function AdminPage() {
 
   const isPro = TIER_CONFIG[await getTier()].sbom;
 
-  const [users, license, keyPreview, teams, alertChannels, auditLog] = await Promise.all([
+  const [users, teams, alertChannels, auditLog] = await Promise.all([
     listUsers(),
-    getLicenseInfo(),
-    getLicenseKeyPreview(),
     prisma.team.findMany({
       include: {
         _count: { select: { members: true } },
@@ -40,8 +36,6 @@ export default async function AdminPage() {
   return (
     <AdminClient
       initialUsers={users}
-      license={license}
-      licenseKeyPreview={keyPreview}
       initialTeams={teams}
       isPro={isPro}
       initialAlertChannels={alertChannels}

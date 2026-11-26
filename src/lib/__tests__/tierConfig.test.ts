@@ -4,14 +4,6 @@ import { TIER_CONFIG } from '../tierConfig';
 describe('TIER_CONFIG - free tier', () => {
   const free = TIER_CONFIG.free;
 
-  it('has maxProjects of 3', () => {
-    expect(free.maxProjects).toBe(3);
-  });
-
-  it('has maxNodes of 30', () => {
-    expect(free.maxNodes).toBe(30);
-  });
-
   it('allows realtime collaboration', () => {
     expect(free.realtimeCollab).toBe(true);
   });
@@ -52,14 +44,6 @@ describe('TIER_CONFIG - free tier', () => {
 describe('TIER_CONFIG - pro tier', () => {
   const pro = TIER_CONFIG.pro;
 
-  it('has unlimited projects (null)', () => {
-    expect(pro.maxProjects).toBeNull();
-  });
-
-  it('has unlimited nodes (null)', () => {
-    expect(pro.maxNodes).toBeNull();
-  });
-
   it('allows all boolean features', () => {
     const booleanFeatures = Object.entries(pro)
       .filter(([, v]) => typeof v === 'boolean')
@@ -78,17 +62,6 @@ describe('TIER_CONFIG - free is a strict subset of pro', () => {
       if (typeof value === 'boolean' && value === true) {
         expect((pro as unknown as Record<string, unknown>)[key], `pro should also have "${key}"`).toBe(true);
       }
-    }
-  });
-
-  it('pro has no tighter numeric limits than free', () => {
-    const free = TIER_CONFIG.free;
-    const pro = TIER_CONFIG.pro;
-    if (free.maxProjects !== null && pro.maxProjects !== null) {
-      expect(pro.maxProjects).toBeGreaterThanOrEqual(free.maxProjects);
-    } else {
-      // pro being null (unlimited) is always >= any finite free limit
-      expect(pro.maxProjects).toBeNull();
     }
   });
 });

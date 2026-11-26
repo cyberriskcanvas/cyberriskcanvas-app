@@ -3,7 +3,6 @@
 import { requireSession } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { assertProjectAccess, assertProjectWriteAccess, isReviewTeamMember } from '@/lib/access';
-import { getTierLimit, TierError } from '@/lib/tierGuard';
 import { revalidatePath } from 'next/cache';
 import type { DiagramNode, DiagramEdge } from '@/types';
 
@@ -141,15 +140,9 @@ export async function createProject(
     if (!membership) throw new Error('Team not found');
   }
 
-  const maxProjects = await getTierLimit('maxProjects');
   const existingCount = await prisma.project.count({
     where: teamId ? { teamId } : { ownerId: session.user.id, teamId: null },
   });
-  if (maxProjects !== null && existingCount >= maxProjects) {
-    throw new TierError(
-      `Your license is limited to ${maxProjects} project${maxProjects === 1 ? '' : 's'}. Upgrade to a Pro license to create more.`,
-    );
-  }
   const isFirstProject = existingCount === 0;
   const nodes = initialNodes ?? (isFirstProject ? STARTER_NODES : undefined);
   const edges = initialEdges ?? (isFirstProject ? STARTER_EDGES : undefined);

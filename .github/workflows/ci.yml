@@ -20,8 +20,6 @@ jobs:
     uses: ./.github/workflows/checks.yml
 
   # ── 3. Image: build, start it against a database and smoke-test it, then publish ──
-  # The public repository publishes the core edition (ghcr.io/cyberriskcanvas/cyberriskcanvas-app);
-  # in the private Pro repository this job only checks, the image is published by release.yml.
   docker:
     name: Docker image
     runs-on: ubuntu-latest
@@ -30,7 +28,6 @@ jobs:
       contents: read
       packages: write
     env:
-      EDITION: ${{ github.repository == 'cyberriskcanvas/cyberriskcanvas-pro' && 'pro' || 'core' }}
       IMAGE: ghcr.io/cyberriskcanvas/cyberriskcanvas-app
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/crc
     services:
@@ -78,10 +75,10 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
 
-      - name: Smoke test (${{ env.EDITION }} edition)
+      - name: Smoke test
         run: |
           npm install -g yarn && yarn install --frozen-lockfile --ignore-scripts
-          node scripts/smoke.mjs "$EDITION"
+          node scripts/smoke.mjs
 
       - name: Container log on failure
         if: failure()
@@ -105,7 +102,7 @@ jobs:
             type=sha,prefix=sha-,format=short
             type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
 
-      - name: Publish the core image
+      - name: Publish the application image
         if: github.event_name == 'push' && github.repository == 'cyberriskcanvas/cyberriskcanvas-app'
         uses: docker/build-push-action@v6
         with:

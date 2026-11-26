@@ -16,6 +16,7 @@ import { useDiagramStore } from '@/store/diagramStore';
 import { useProjectStore, selectIsLocked } from '@/store/projectStore';
 import { saveDiagram } from '@/actions/diagrams';
 import { importFromDrawio } from '@/utils/drawioImport';
+import { CanvasImportDialog } from './CanvasImportDialog';
 import type { CollabUser } from '@/types';
 import { useLanguageStore } from '@/store/languageStore';
 import { useT } from '@/hooks/useT';
@@ -225,6 +226,8 @@ export function Toolbar({
   const attackGuard = useTierGuard('attackPaths');
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const canvasJsonInputRef = useRef<HTMLInputElement>(null);
+  const [canvasJsonText, setCanvasJsonText] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
   const handleSave = async () => {
@@ -252,6 +255,12 @@ export function Toolbar({
     e.target.value = '';
   };
 
+  const handleCanvasJsonImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (file) void file.text().then(setCanvasJsonText);
+  };
+
   const handleClearCanvas = () => {
     if (window.confirm(t.clearConfirm)) {
       setNodes([]);
@@ -262,9 +271,10 @@ export function Toolbar({
   const collabCount = collaborators.size;
 
   const drawioItem = <DropdownItem onClick={() => { fileInputRef.current?.click(); closeMenus(); }} icon={<Upload size={14} />} label={t.toolbar.importDrawio} />;
+  const canvasJsonItem = <DropdownItem onClick={() => { canvasJsonInputRef.current?.click(); closeMenus(); }} icon={<Upload size={14} />} label={t.toolbar.importCanvasJson} />;
   const versionsItem = <DropdownItem onClick={() => { onOpenVersions(); closeMenus(); }} icon={<History size={14} />} label={t.toolbar.versionHistory} active={versionsOpen} />;
   const clearItem = <DropdownItem onClick={() => { handleClearCanvas(); closeMenus(); }} icon={<Trash2 size={14} />} label={t.toolbar.clearCanvas} danger />;
-  const aiItem = <DropdownItem onClick={() => { if (aiGuard.allowed) onOpenAI(); else aiGuard.showPaywall(); closeMenus(); }} icon={<Brain size={14} />} label={t.toolbar.aiAnalysisLabel} indigo disabled comingSoon />;
+  const aiItem = <DropdownItem onClick={() => { if (aiGuard.allowed) onOpenAI(); else aiGuard.showPaywall(); closeMenus(); }} icon={<Brain size={14} />} label={t.toolbar.aiAnalysisLabel} indigo />;
   const attackItem = <DropdownItem onClick={() => { if (attackGuard.allowed) onOpenAttackPaths(); else attackGuard.showPaywall(); closeMenus(); }} icon={<Route size={14} />} label={t.toolbar.attackPaths} active={attackPathsOpen} />;
 
   return (
@@ -308,7 +318,8 @@ export function Toolbar({
                 onClick={() => { setFileOpen((v) => !v); setAnalyseOpen(false); setAccountOpen(false); }}
               />
               {fileOpen && (
-                <div className="absolute left-0 top-full mt-1 w-52 rounded-xl border border-gray-800 bg-gray-900 py-1.5 shadow-lg z-50 px-1.5">
+                <div className="absolute left-0 top-full mt-1 w-64 rounded-xl border border-gray-800 bg-gray-900 py-1.5 shadow-lg z-50 px-1.5">
+                  {canvasJsonItem}
                   {drawioItem}
                   <DropdownItem
                     onClick={() => { onOpenTemplates(); setFileOpen(false); }}
@@ -328,6 +339,16 @@ export function Toolbar({
               className="hidden"
               onChange={handleDrawioImport}
             />
+            <input
+              ref={canvasJsonInputRef}
+              type="file"
+              accept=".json,application/json"
+              className="hidden"
+              onChange={handleCanvasJsonImport}
+            />
+            {canvasJsonText !== null && (
+              <CanvasImportDialog diagramId={diagramId} text={canvasJsonText} onClose={() => setCanvasJsonText(null)} />
+            )}
 
             {/* Analyse dropdown */}
             <div ref={analyseRef} className="relative">

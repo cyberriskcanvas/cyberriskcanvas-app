@@ -28,8 +28,6 @@ services:
       retries: 10
 
   app:
-    # Core edition (open source). The Pro edition, with the same settings, is ghcr.io/cyberriskcanvas/cyberriskcanvas-pro:latest:
-    # set CRC_IMAGE to it in .env and activate the licence key under Settings -> License.
     image: ${CRC_IMAGE:-ghcr.io/cyberriskcanvas/cyberriskcanvas-app:latest}
     restart: unless-stopped
     ports:

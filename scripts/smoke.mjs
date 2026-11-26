@@ -70,5 +70,5 @@ if (diagramId) {
   check(sbom === 200, `GET /api/projects/…/vulnerabilities is 200 (${sbom})`);
 }
 
-console.warn(failed === 0 ? `\nsmoke test (${edition}): all checks passed` : `\nsmoke test (${edition}): ${failed} check(s) failed`);
+console.warn(failed === 0 ? '\nsmoke test: all checks passed' : `\nsmoke test: ${failed} check(s) failed`);
 process.exit(failed === 0 ? 0 : 1);

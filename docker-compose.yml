@@ -89,11 +89,12 @@ services:
     restart: unless-stopped
     profiles: ['cve-scan']
     environment:
-      CVE_SCAN_SECRET: ${CVE_SCAN_SECRET:?Set CVE_SCAN_SECRET to use the cve-scan profile}
+      CVE_SCAN_SECRET: ${CVE_SCAN_SECRET:-}
       CVE_SCAN_INTERVAL_SECONDS: ${CVE_SCAN_INTERVAL_SECONDS:-21600}
     entrypoint: ['/bin/sh', '-c']
     command:
       - |
+        : "$${CVE_SCAN_SECRET:?Set CVE_SCAN_SECRET to use the cve-scan profile}"
         while true; do
           echo "[cve-scan] $(date -u +%Y-%m-%dT%H:%M:%SZ) triggering scan…"
           curl -fsS -o /dev/null -w '[cve-scan] HTTP %{http_code}\n' \

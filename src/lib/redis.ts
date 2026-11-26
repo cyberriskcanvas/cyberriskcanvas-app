@@ -38,7 +38,7 @@ export async function bufferDiagram(id: string, patch: DiagramPatch, userId: str
       .exec();
   } catch {
     // Redis unavailable - write directly to Postgres as fallback
-    await prisma.diagram.update({ where: { id }, data: patch as Record<string, unknown> });
+    await prisma.diagram.update({ where: { id, deletedAt: null }, data: patch as Record<string, unknown> });
   }
 }
 
@@ -57,7 +57,7 @@ export async function flushDiagram(id: string): Promise<void> {
     const raw = await redis.get(key);
     if (!raw) return;
     const { patch }: DiagramBuffer = JSON.parse(raw);
-    await prisma.diagram.update({ where: { id }, data: patch as Record<string, unknown> });
+    await prisma.diagram.updateMany({ where: { id, deletedAt: null }, data: patch as Record<string, unknown> });
     await redis.pipeline().del(key).srem(DIRTY_SET, id).exec();
   } catch (err) {
     console.error(`[redis] flush failed for diagram ${id}:`, err);

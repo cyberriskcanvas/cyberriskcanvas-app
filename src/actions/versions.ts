@@ -100,7 +100,7 @@ export async function restoreVersion(diagramId: string, versionId: string) {
   }
 
   return prisma.diagram.update({
-    where: { id: diagramId },
+    where: { id: diagramId, deletedAt: null },
     data: {
       nodes: version.nodes as object,
       edges: version.edges as object,

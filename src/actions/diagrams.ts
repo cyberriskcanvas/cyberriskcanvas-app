@@ -69,6 +69,6 @@ export async function deleteDiagram(id: string) {
   const session = await requireSession();
   await assertDiagramWriteAccess(id, session.user.id);
   // Soft delete keeps the diagram's freeze snapshots (audit records). Pending edits are dropped, not flushed.
+  await prisma.diagram.update({ where: { id, deletedAt: null }, data: { deletedAt: new Date() } });
   await discardDiagramBuffer(id);
-  await prisma.diagram.update({ where: { id }, data: { deletedAt: new Date() } });
 }

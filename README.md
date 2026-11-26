@@ -335,7 +335,7 @@ yarn dev
 
 ## Contributing
 
-Open an [issue](https://github.com/cyberriskcanvas/cyberriskcanvas-app/issues) before submitting large changes. Pull requests are welcome.
+Code, tests, translations and documentation are welcome across the whole app. See [Contributing](CONTRIBUTING.md) for a first contribution, local setup and the fork-to-PR workflow.
 
 ---
 

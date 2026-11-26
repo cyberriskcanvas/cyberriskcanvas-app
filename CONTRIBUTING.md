@@ -1,6 +1,6 @@
 # Contributing to CyberRisk Canvas
 
-Thank you for your interest in contributing. This document covers everything you need to get started.
+Anyone can contribute to any feature through a GitHub fork. For a typo or documentation fix, use the pencil icon on the file in GitHub and follow the prompts to open a pull request. Code and documentation contributions are accepted under the [Apache License 2.0](LICENSE).
 
 ## Table of Contents
 
@@ -27,39 +27,26 @@ For significant changes, please open an issue first to discuss the approach befo
 
 ## Development Setup
 
-**Prerequisites:** Node.js 20+, Yarn, Docker
+For code changes, use Node.js 26 and Yarn Classic (1.22.x), matching CI. Fork [cyberriskcanvas-app](https://github.com/cyberriskcanvas/cyberriskcanvas-app/fork), then clone your fork.
 
 ```bash
-# 1. Fork and clone
-git clone https://github.com/your-fork/cyberrisk-canvas.git
-cd cyberrisk-canvas
+git clone https://github.com/YOUR-USERNAME/cyberriskcanvas-app.git
+cd cyberriskcanvas-app
+git switch -c my-change
+yarn install --frozen-lockfile
+DATABASE_URL=postgresql://local:local@localhost:5432/local yarn prisma:generate
+yarn eslint . --max-warnings 0
+yarn typecheck
+yarn test
+```
 
-# 2. Start local services
-docker compose -f docker-compose.local.yml up -d
+These checks run without a database or external API keys. To run the web app locally, install Docker Compose and copy `.env.example` to `.env`. Set local admin credentials and an auth secret. For a host-based dev server, use a literal PostgreSQL URL with the same password as `POSTGRES_PASSWORD` and host `localhost`, set `REDIS_URL=redis://localhost:6379`, and set `AUTH_URL` and `APP_URL` to `http://localhost:3000`.
 
-# 3. Install dependencies
-yarn install
-
-# 4. Configure environment
-cp .env.example .env
-# Edit .env - set ADMIN_EMAIL, ADMIN_PASSWORD, and secrets
-
-# 5. Apply database migrations
+```bash
+docker compose -f docker-compose.local.yml up -d db redis
 yarn prisma:migrate-deploy
-
-# 6. Start the dev server
 yarn dev
 ```
-
-The app runs at `http://localhost:3000`. The admin user is created automatically on first start.
-
-### Type checking
-
-```bash
-yarn typecheck
-```
-
----
 
 ## Project Structure
 
@@ -69,7 +56,7 @@ src/
   actions/      # Next.js Server Actions (data mutations)
   components/   # React components, organised by feature
   hooks/        # Custom React hooks
-  lib/          # Shared server-side utilities (auth, db, license, access)
+  lib/          # Shared server-side utilities (auth, db, access)
   store/        # Zustand client state stores
   types/        # Shared TypeScript types
   i18n/         # Internationalisation strings
@@ -83,20 +70,13 @@ prisma/
 
 - **Server Actions** in `src/actions/` handle all data mutations - never call the DB directly from client components
 - **Access control** goes through `src/lib/access.ts` - use `assertProjectAccess` / `canAccessProject`
-- **License gating** goes through `src/lib/tierGuard.ts` - use `requireTierFeature` / `checkTierFeature`
 - **No `withRLS`** - Row-Level Security has been removed; use direct `prisma` calls with explicit access checks
 
 ---
 
 ## Submitting Changes
 
-1. Create a branch from `main`: `git checkout -b fix/your-description`
-2. Make your changes and ensure `yarn typecheck` passes
-3. Commit using the [commit message format](#commit-messages) below
-4. Push and open a Pull Request against `main`
-5. Fill in the PR template
-
-Pull requests are reviewed within a few business days. Please keep PRs focused - one concern per PR is easier to review and merge.
+Commit your changes on your branch, push with `git push -u origin HEAD`, and open a pull request from your fork into `cyberriskcanvas/cyberriskcanvas-app:main`. Describe the change and how you tested it. You can open a draft for early feedback. GitHub Actions runs the project checks on pull requests.
 
 ---
 

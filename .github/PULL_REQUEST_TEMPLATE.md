@@ -1,25 +1,7 @@
-## Summary
+## What changed?
 
-Brief description of what this PR does and why.
+Describe the change and why it helps. Link a related issue if there is one.
 
-## Type of change
+## How did you check it?
 
-- [ ] Bug fix
-- [ ] New feature (Community)
-- [ ] Refactor / cleanup
-- [ ] Documentation
-- [ ] Dependency update
-- [ ] Other:
-
-## Related issue
-
-Closes #
-
-## Checklist
-
-- [ ] `yarn typecheck` passes
-- [ ] No new `any` types without justification
-- [ ] Access control checked - mutations go through `assertProjectAccess` or `requireAdmin`
-- [ ] Pro features are gated with `requireTierFeature` / `checkTierFeature`
-- [ ] No secrets, credentials, or personal data committed
-- [ ] CHANGELOG.md updated (for user-facing changes)
+List the tests or manual checks you ran. For a UI change, a screenshot can help reviewers.

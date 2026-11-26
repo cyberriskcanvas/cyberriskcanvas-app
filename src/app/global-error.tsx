@@ -3,8 +3,7 @@
 import { useEffect } from 'react';
 
 /**
- * Catches errors thrown in the root layout itself (e.g. getLicenseInfo()
- * failing) - app/error.tsx cannot, since it renders inside that layout.
+ * Catches errors thrown in the root layout itself - app/error.tsx cannot, since it renders inside that layout.
  * Must render its own <html>/<body>: it replaces the root layout entirely.
  */
 export default function GlobalError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {

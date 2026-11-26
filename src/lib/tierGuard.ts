@@ -13,19 +13,6 @@ type BooleanFeature = {
   [K in keyof TierConfig]: TierConfig[K] extends boolean ? K : never;
 }[keyof TierConfig];
 
-type NumericLimit = {
-  [K in keyof TierConfig]: TierConfig[K] extends number | null ? K : never;
-}[keyof TierConfig];
-
-/**
- * Returns the configured numeric limit for the current tier.
- * Returns null when the tier has no limit (unlimited).
- */
-export async function getTierLimit(limit: NumericLimit): Promise<number | null> {
-  const tier = await getTier();
-  return TIER_CONFIG[tier][limit] as number | null;
-}
-
 export async function getSessionTier(): Promise<{ userId: string; tier: Tier }> {
   const session = await requireSession();
   const tier = await getTier();

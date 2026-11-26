@@ -27,7 +27,7 @@ yarn build
 
 Before you hand work over: typecheck, lint, tests. A change that touches routes, pages or the Dockerfile also needs the
 smoke test: start the app against a database and run
-`BASE_URL=http://localhost:3000 ADMIN_EMAIL=… ADMIN_PASSWORD=… DATABASE_URL=… node scripts/smoke.mjs core|pro`.
+`BASE_URL=http://localhost:3000 ADMIN_EMAIL=… ADMIN_PASSWORD=… DATABASE_URL=… node scripts/smoke.mjs`.
 
 ## Layout
 
@@ -41,7 +41,7 @@ src/data/         static catalogues (CRA, IEC 62443, BSI, templates)
 src/utils/        pure helpers, PDF export (pdfmake, shared pieces in utils/pdf.ts)
 src/pro/          the only door from the free code into Pro code, see Editions
 prisma/           schema and SQL migrations
-scripts/          smoke test and the export of the core edition
+scripts/          runtime smoke test
 server.ts         custom server: Next, Socket.IO, background jobs, first-admin bootstrap
 ```
 
@@ -49,7 +49,7 @@ server.ts         custom server: Next, Socket.IO, background jobs, first-admin b
 
 - **Access and licence checks are explicit.** `src/lib/access.ts` (`assertProjectAccess`, `assertProjectWriteAccess`,
   `canAccessProject`) for who may see or change a product; `src/lib/tierGuard.ts` (`requireTierFeature`) or
-  `withProLicense` for Pro features; `useTierGuard` in the UI. A new gated feature gets a flag in `src/lib/tierConfig.ts`.
+  API routes must validate the session or scoped token.
 - **Validate input where it enters** (server action or route handler), with pure validators next to the logic
   (`validatePolicy`, `sanitizeRemediation`, …) so they can be unit-tested.
 - **Findings have one read path.** `src/lib/findings.ts` (`loadFindings`) joins components, advisory matches and the
@@ -72,18 +72,9 @@ server.ts         custom server: Next, Socket.IO, background jobs, first-admin b
 - **Commits:** Conventional Commits (`feat(scope): …`, types in CONTRIBUTING.md), one concern per commit.
 - Never commit `.env`, licence keys or anything from `keys/`.
 
-## Editions
+## Distribution
 
-The product ships as a **core edition** (open source, this repository's public face) and a **Pro edition** (adds
-SBOM and vulnerability management, CI gate, CSAF and Art. 14, assessment, AI, compliance exports). Free code must reach
-Pro code only through `src/pro/ui.tsx`, `src/pro/server.ts` and `src/pro/jobs.ts`; in the core edition those three files are
-small stand-ins. So:
-
-- never import a Pro module directly from a free file; add an export to the matching `src/pro/*` file and import from there;
-- use `PRO_EDITION` from `src/pro/ui` to hide a link or button that would lead to a Pro-only page or route;
-- a new page or route that is only part of Pro must not be linked from free code unguarded (the core build would show a 404).
-
-If a file `PRO.md` exists in your checkout, it describes how the two editions are built and released.
+The public app includes the full product under Apache-2.0. Keep user, project and pipeline authorization checks in place.
 
 ## Gotchas
 

@@ -4,7 +4,6 @@ import MicrosoftEntraID from 'next-auth/providers/microsoft-entra-id';
 import bcrypt from 'bcryptjs';
 import { prisma } from './db';
 import { getTier } from './tierLimits';
-import { getLicenseChangedAt } from './license';
 import { TIER_CONFIG } from './tierConfig';
 import { AVATAR_COLORS } from './constants';
 import { isLoginBlocked, registerFailedLogin, clearLoginFailures } from './loginRateLimit';
@@ -190,12 +189,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         return token;
       }
 
-      // Re-fetch tier from license every 5 minutes, or immediately when the
-      // license key was changed (e.g. activated via the admin panel) since
-      // the last refresh - so a freshly saved license shows up right away.
+      // Periodically refresh account details for existing sessions.
       const TIER_TTL_MS = 5 * 60 * 1000;
       const lastRefresh = (token.tierRefreshedAt as number | undefined) ?? 0;
-      if (Date.now() - lastRefresh > TIER_TTL_MS || getLicenseChangedAt() > lastRefresh) {
+      if (Date.now() - lastRefresh > TIER_TTL_MS) {
         try {
           const fresh = await buildUser(token.id as string);
           // User no longer exists - invalidate the session instead of letting

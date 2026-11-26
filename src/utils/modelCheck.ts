@@ -5,7 +5,7 @@ import type { DiagramEdge, DiagramNode, NodeData, Threat } from '@/types';
 import { computeAttackPaths } from './attackPaths';
 
 export type Severity = 'high' | 'medium' | 'low';
-export type RuleId = 'M01' | 'M02' | 'M03' | 'M04' | 'M05' | 'M06' | 'M07' | 'M08' | 'M09' | 'M10' | 'M11';
+export type RuleId = 'M01' | 'M02' | 'M03' | 'M04' | 'M05' | 'M06' | 'M07' | 'M08' | 'M09' | 'M10' | 'M11' | 'M12';
 
 export interface Finding {
   /** Stable across runs: rule + affected elements. Used for dismissals. */
@@ -219,6 +219,18 @@ export function checkModel({ nodes, edges, decidedRequirements = new Set() }: Mo
       craRefs: ['ER.12', 'ER.11a'], iecRefs: ['SR 5.2'],
       suggestedThreat: { name: `Attack path ${p.hops[0]?.nodeLabel ?? ''} → ${p.hops.at(-1)?.nodeLabel ?? ''}`, stride: 'E', description: 'A high-scoring attack path has no measure on any of its components.' },
     }));
+  }
+
+  // M12: element of an earlier import (e.g. Digital Fabric) that the latest import no longer contains
+  for (const n of nodes) {
+    if (!data(n).importOrphan) continue;
+    out.push(finding({ ruleId: 'M12', severity: 'medium', nodeIds: [n.id], edgeIds: [], params: { element: label(n) }, craRefs: ['ER.0'], iecRefs: ['IEC 62443-3-2 (ZCR 1)'] }));
+  }
+  for (const e of edges) {
+    if (!e.data?.importOrphan) continue;
+    const [src, tgt] = [byId.get(e.source), byId.get(e.target)];
+    const element = `${src ? label(src) : e.source} → ${tgt ? label(tgt) : e.target}`;
+    out.push(finding({ ruleId: 'M12', severity: 'medium', nodeIds: [], edgeIds: [e.id], params: { element }, craRefs: ['ER.0'], iecRefs: ['IEC 62443-3-2 (ZCR 1)'] }));
   }
 
   // De-duplicate by id (the same pair can be found from both directions)

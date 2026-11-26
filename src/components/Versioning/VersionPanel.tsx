@@ -7,11 +7,13 @@ import { useDiagramStore } from '@/store/diagramStore';
 import type { DiagramNode, DiagramEdge } from '@/types';
 import { cn } from '@/utils/cn';
 import { relativeTime } from '@/utils/format';
+import { useVersioningT } from '@/i18n/versioning';
 
 interface DiagramVersionMeta {
   id: string;
   message: string | null;
   createdAt: Date;
+  projectVersionId: string | null;
   user: { id: string; name: string; color: string } | null;
 }
 
@@ -29,6 +31,7 @@ export function VersionPanel({ diagramId, onClose, userName }: Props) {
   const [saving, setSaving] = useState(false);
   const [restoring, setRestoring] = useState<string | null>(null);
   const [message, setMessage] = useState('');
+  const vt = useVersioningT();
   const [showSaveForm, setShowSaveForm] = useState(false);
 
   useEffect(() => {
@@ -153,6 +156,11 @@ export function VersionPanel({ diagramId, onClose, userName }: Props) {
                       {idx === 0 && (
                         <span className="rounded bg-indigo-900/60 px-1.5 py-0.5 text-[9px] font-bold text-indigo-400">
                           latest
+                        </span>
+                      )}
+                      {v.projectVersionId && (
+                        <span title={vt.frozenHint} className="rounded bg-amber-900/60 px-1.5 py-0.5 text-[9px] font-bold text-amber-400">
+                          {vt.frozen}
                         </span>
                       )}
                     </div>

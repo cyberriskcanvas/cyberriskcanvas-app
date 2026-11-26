@@ -69,7 +69,7 @@ export async function assertProjectWriteAccess(projectId: string, userId: string
 /** Throws if the user cannot access the diagram's project. */
 export async function assertDiagramAccess(diagramId: string, userId: string): Promise<void> {
   const diagram = await prisma.diagram.findUnique({
-    where: { id: diagramId },
+    where: { id: diagramId, deletedAt: null },
     select: { projectId: true },
   });
   if (!diagram) throw new Error('Diagram not found');
@@ -79,7 +79,7 @@ export async function assertDiagramAccess(diagramId: string, userId: string): Pr
 /** Throws if the user cannot *write* to the diagram's project (review-team excluded). */
 export async function assertDiagramWriteAccess(diagramId: string, userId: string): Promise<void> {
   const diagram = await prisma.diagram.findUnique({
-    where: { id: diagramId },
+    where: { id: diagramId, deletedAt: null },
     select: { projectId: true },
   });
   if (!diagram) throw new Error('Diagram not found');

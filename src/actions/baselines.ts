@@ -64,7 +64,7 @@ export async function branchProject(projectId: string, label: string) {
   }
 
   const firstDiagram = await prisma.diagram.findFirst({
-    where: { projectId },
+    where: { projectId, deletedAt: null },
     orderBy: { createdAt: 'asc' },
     select: { id: true },
   });

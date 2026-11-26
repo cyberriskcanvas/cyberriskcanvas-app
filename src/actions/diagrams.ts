@@ -1,9 +1,8 @@
 'use server';
 
 import { requireSession } from '@/lib/auth';
-import { bufferDiagram } from '@/lib/redis';
+import { bufferDiagram, discardDiagramBuffer } from '@/lib/redis';
 import { assertDiagramAccess, assertDiagramWriteAccess, assertProjectWriteAccess } from '@/lib/access';
-import { getTierLimit, TierError } from '@/lib/tierGuard';
 import { prisma } from '@/lib/db';
 
 export async function getDiagram(id: string) {
@@ -11,7 +10,7 @@ export async function getDiagram(id: string) {
   // Access is verified before diagram data is fetched - avoids reading
   // sensitive node/edge data prior to the authorization check.
   await assertDiagramAccess(id, session.user.id);
-  const diagram = await prisma.diagram.findUnique({ where: { id } });
+  const diagram = await prisma.diagram.findUnique({ where: { id, deletedAt: null } });
   if (!diagram) throw new Error('Diagram not found');
   return diagram;
 }
@@ -23,7 +22,7 @@ export async function saveDiagram(
   const session = await requireSession();
   await assertDiagramWriteAccess(id, session.user.id);
 
-  const diagram = await prisma.diagram.findUnique({ where: { id }, select: { projectId: true } });
+  const diagram = await prisma.diagram.findUnique({ where: { id, deletedAt: null }, select: { projectId: true } });
   if (diagram) {
     const activeVersion = await prisma.projectVersion.findFirst({
       where: { projectId: diagram.projectId, status: 'active' },
@@ -32,20 +31,6 @@ export async function saveDiagram(
     });
     if (activeVersion?.status === 'frozen') {
       throw new Error(`Version ${activeVersion.number}${activeVersion.label ? ` (${activeVersion.label})` : ''} is frozen. Create a new version to make changes.`);
-    }
-  }
-
-  if (Array.isArray(data.nodes)) {
-    const maxNodes = await getTierLimit('maxNodes');
-    if (maxNodes !== null) {
-      const count = (data.nodes as Array<{ type?: string }>).filter(
-        (n) => n?.type !== 'boundary',
-      ).length;
-      if (count > maxNodes) {
-        throw new TierError(
-          `Your license is limited to ${maxNodes} components per diagram. Upgrade to a Pro license to add more.`,
-        );
-      }
     }
   }
 
@@ -68,5 +53,7 @@ export async function createDiagram(projectId: string, name: string) {
 export async function deleteDiagram(id: string) {
   const session = await requireSession();
   await assertDiagramWriteAccess(id, session.user.id);
-  await prisma.diagram.delete({ where: { id } });
+  // Soft delete keeps the diagram's freeze snapshots (audit records). Pending edits are dropped, not flushed.
+  await prisma.diagram.update({ where: { id, deletedAt: null }, data: { deletedAt: new Date() } });
+  await discardDiagramBuffer(id);
 }

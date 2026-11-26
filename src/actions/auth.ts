@@ -4,7 +4,6 @@ import bcrypt from 'bcryptjs';
 import { requireSession, requireAdmin } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { requireTierFeature } from '@/lib/tierGuard';
-import { getLicenseInfo } from '@/lib/license';
 import { audit } from '@/lib/audit';
 
 import { AVATAR_COLORS } from '@/lib/constants';
@@ -174,11 +173,4 @@ export async function deleteAccount() {
     targetType: 'user',
     targetId: session.user.id,
   });
-}
-
-// ─── License ──────────────────────────────────────────────────────────────────
-
-export async function getLicenseStatus() {
-  await requireAdmin();
-  return getLicenseInfo();
 }

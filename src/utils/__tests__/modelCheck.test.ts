@@ -74,6 +74,15 @@ describe('rules', () => {
     const mitigated = nodes.map((n) => ({ ...n, data: { ...n.data, measures: [{ id: 'm', title: 'x', status: 'open' }] } })) as DiagramNode[];
     expect(rules(mitigated, [edge('e', 'gw', 'ecu')])).not.toContain('M11');
   });
+
+  it('M12 elements an earlier import no longer contains, components and connections', () => {
+    const nodes = [comp('df-a', { importOrphan: true }), comp('df-b', {})];
+    const found = checkModel({ nodes, edges: [edge('df-conn-x', 'df-a', 'df-b', { importOrphan: true })] }).filter((f) => f.ruleId === 'M12');
+    expect(found.map((f) => [f.nodeIds, f.edgeIds])).toEqual([[['df-a'], []], [[], ['df-conn-x']]]);
+    expect(found[1].params.element).toBe('df-a → df-b');
+    expect(found.every((f) => f.severity === 'medium')).toBe(true);
+    expect(rules([comp('df-a', {})])).not.toContain('M12');
+  });
 });
 
 describe('findings and dismissals', () => {

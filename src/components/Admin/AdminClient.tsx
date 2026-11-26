@@ -3,13 +3,11 @@
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import {
-  Shield, Users, Key, ChevronLeft, Plus, Pencil, Trash2,
+  Shield, Users, ChevronLeft, Plus, Pencil, Trash2,
   CheckCircle, AlertCircle, X, ChevronDown, ChevronUp, Layers, Bell, ScrollText,
 } from 'lucide-react';
 import { createUser, updateUser, deleteUser } from '@/actions/auth';
-import { saveLicenseKey } from '@/actions/license';
 import { listAuditLog, type AuditLogPage } from '@/actions/audit';
-import type { LicenseInfo } from '@/lib/license';
 import { AlertChannelsSection } from '@/pro/ui';
 import type { listAlertChannels } from '@/pro/server';
 
@@ -33,8 +31,6 @@ interface Team {
 
 interface Props {
   initialUsers: User[];
-  license: LicenseInfo;
-  licenseKeyPreview: string | null;
   initialTeams: Team[];
   isPro: boolean;
   initialAlertChannels: Awaited<ReturnType<typeof listAlertChannels>>;
@@ -196,9 +192,9 @@ function UserModal({
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
-type Section = 'users' | 'teams' | 'license' | 'alerts' | 'audit';
+type Section = 'users' | 'teams' | 'alerts' | 'audit';
 
-export default function AdminClient({ initialUsers, license, licenseKeyPreview, initialTeams, isPro, initialAlertChannels, initialAuditLog }: Props) {
+export default function AdminClient({ initialUsers, initialTeams, isPro, initialAlertChannels, initialAuditLog }: Props) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [section, setSection] = useState<Section>('users');
@@ -227,7 +223,6 @@ export default function AdminClient({ initialUsers, license, licenseKeyPreview, 
     { id: 'teams', label: 'Teams', icon: <Layers size={16} /> },
     { id: 'alerts', label: 'Alerts', icon: <Bell size={16} /> },
     { id: 'audit', label: 'Audit Log', icon: <ScrollText size={16} /> },
-    { id: 'license', label: 'License', icon: <Key size={16} /> },
   ];
 
   return (
@@ -375,7 +370,6 @@ export default function AdminClient({ initialUsers, license, licenseKeyPreview, 
                 <TeamsSection initialTeams={initialTeams} users={users} onRefresh={refresh} />
               )}
 
-              {/* ── License ── */}
               {section === 'alerts' && (
                 <AlertChannelsSection isPro={isPro} initialChannels={initialAlertChannels} />
               )}
@@ -384,9 +378,7 @@ export default function AdminClient({ initialUsers, license, licenseKeyPreview, 
                 <AuditLogSection initial={initialAuditLog} />
               )}
 
-              {section === 'license' && (
-                <LicenseSection license={license} keyPreview={licenseKeyPreview} />
-              )}
+
             </div>
           </div>
         </main>
@@ -460,172 +452,6 @@ function AuditLogSection({ initial }: { initial: AuditLogPage }) {
           </button>
         </div>
       )}
-    </div>
-  );
-}
-
-// ─── License Helpers ──────────────────────────────────────────────────────────
-
-function formatExpiresAt(expiresAt: string): string {
-  const date = new Date(expiresAt);
-  const now = new Date();
-  const diffMs = date.getTime() - now.getTime();
-  const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
-
-  const dateStr = date.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
-  if (diffDays < 0) return `${dateStr} (abgelaufen)`;
-  if (diffDays === 0) return `${dateStr} (heute)`;
-  if (diffDays === 1) return `${dateStr} (noch 1 Tag)`;
-  if (diffDays <= 30) return `${dateStr} (noch ${diffDays} Tage)`;
-  const diffMonths = Math.floor(diffDays / 30);
-  return `${dateStr} (noch ${diffMonths} Monat${diffMonths !== 1 ? 'e' : ''})`;
-}
-
-function getExpiryColor(expiresAt: string): string {
-  const diffMs = new Date(expiresAt).getTime() - Date.now();
-  const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
-  if (diffDays < 0) return 'text-red-400';
-  if (diffDays <= 14) return 'text-yellow-400';
-  return 'text-gray-300';
-}
-
-// ─── License Section ──────────────────────────────────────────────────────────
-
-function LicenseSection({ license: initialLicense, keyPreview: initialKeyPreview }: {
-  license: LicenseInfo;
-  keyPreview: string | null;
-}) {
-  const router = useRouter();
-  const [license, setLicense] = useState(initialLicense);
-  const [keyPreview, setKeyPreview] = useState(initialKeyPreview);
-  const [key, setKey] = useState('');
-  const [isPending, startTransition] = useTransition();
-  const [msg, setMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
-
-  const handleSave = () => {
-    setMsg(null);
-    startTransition(async () => {
-      try {
-        const result = await saveLicenseKey(key);
-        setLicense(result);
-        setKeyPreview(key.trim().length > 4 ? '••••••••••••' + key.trim().slice(-4) : key.trim() ? '••••' : null);
-        setKey('');
-        setMsg({
-          type: result.valid ? 'success' : 'error',
-          text: result.valid ? 'Pro license activated.' : 'Key saved but validation failed - check the key.',
-        });
-        if (result.valid) router.refresh();
-      } catch {
-        setMsg({ type: 'error', text: 'Failed to save license key.' });
-      }
-    });
-  };
-
-  const handleRemove = () => {
-    setMsg(null);
-    startTransition(async () => {
-      try {
-        await saveLicenseKey('');
-        setLicense({ valid: false, licensee: null, expiresAt: null });
-        setKeyPreview(null);
-        setKey('');
-        setMsg({ type: 'success', text: 'License key removed.' });
-        router.refresh();
-      } catch {
-        setMsg({ type: 'error', text: 'Failed to remove license key.' });
-      }
-    });
-  };
-
-  return (
-    <div className="rounded-xl border border-gray-800 bg-gray-900 p-6">
-      <h2 className="mb-1 text-base font-semibold text-white">License</h2>
-      <p className="mb-6 text-sm text-gray-500">
-        Manage your CyberRisk Canvas Pro license. The key is stored securely in the database
-        and validated online against the license server.
-      </p>
-
-      <div className="space-y-4">
-        {/* Status */}
-        <div className="flex items-center gap-3 rounded-xl border border-gray-800 bg-gray-800/50 px-5 py-4">
-          <div className={`h-3 w-3 rounded-full shrink-0 ${license.valid ? 'bg-green-400' : 'bg-red-500'}`} />
-          <div>
-            <p className="text-sm font-semibold text-white">
-              {license.valid ? 'Pro License - Active' : 'No valid license'}
-            </p>
-            <p className="text-xs text-gray-500">
-              {license.valid
-                ? 'All Pro features are unlocked.'
-                : 'Community edition - Pro features are locked.'}
-            </p>
-          </div>
-        </div>
-
-        {license.valid && license.licensee && (
-          <div className="rounded-xl border border-gray-800 bg-gray-800/50 divide-y divide-gray-800">
-            {[
-              ['Licensee', license.licensee],
-              ['Model', 'Flatrate - unlimited users'],
-              ...(license.expiresAt
-                ? [['Valid until', formatExpiresAt(license.expiresAt)]]
-                : []),
-            ].map(([label, value]) => (
-              <div key={label} className="flex items-center justify-between px-5 py-3">
-                <span className="text-xs text-gray-500">{label}</span>
-                <span className={`text-xs font-medium ${label === 'Valid until' ? getExpiryColor(license.expiresAt!) : 'text-gray-300'}`}>{value}</span>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* Key input */}
-        <div className="pt-2">
-          <label className="mb-1.5 block text-xs font-medium text-gray-400">
-            {keyPreview ? 'Replace License Key' : 'License Key'}
-          </label>
-          {keyPreview && (
-            <p className="mb-2 font-mono text-xs text-gray-500">Current: {keyPreview}</p>
-          )}
-          <input
-            type="text"
-            value={key}
-            onChange={(e) => setKey(e.target.value)}
-            placeholder="crc_pro_••••••••••••••••"
-            className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-white font-mono placeholder-gray-600 focus:border-indigo-500 focus:outline-none"
-          />
-        </div>
-
-        {msg && (
-          <div className={`flex items-center gap-2 rounded-lg px-4 py-3 text-sm ${
-            msg.type === 'success'
-              ? 'border border-green-800 bg-green-900/30 text-green-400'
-              : 'border border-red-800 bg-red-900/30 text-red-400'
-          }`}>
-            {msg.type === 'success' ? <CheckCircle size={15} /> : <AlertCircle size={15} />}
-            {msg.text}
-          </div>
-        )}
-
-        <div className="flex gap-2">
-          <button
-            onClick={handleSave}
-            disabled={isPending || !key.trim()}
-            className="flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-50 transition-colors"
-          >
-            {isPending && <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white border-t-transparent" />}
-            Save & Validate
-          </button>
-          {keyPreview && (
-            <button
-              onClick={handleRemove}
-              disabled={isPending}
-              className="rounded-lg border border-gray-700 px-4 py-2 text-sm text-gray-400 hover:bg-gray-800 disabled:opacity-50 transition-colors"
-            >
-              Remove Key
-            </button>
-          )}
-        </div>
-      </div>
     </div>
   );
 }

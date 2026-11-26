@@ -92,6 +92,11 @@ const en = {
       why: () => 'A realistic path from an entry point to a critical component exists and no component along it has a mitigation measure.',
       fix: () => 'Add measures on the path, ideally at the entry point or in front of the critical component.',
     },
+    M12: {
+      title: (p) => `${p.element} is no longer in the imported model`,
+      why: () => 'It came from an earlier import (e.g. Digital Fabric), but the latest import does not contain it. The architecture here and in the source model differ.',
+      fix: () => 'Delete it if it no longer exists. If it stays, clear the note in its Overview or dismiss this finding with a reason.',
+    },
   } as Record<RuleId, RuleText>,
 };
 
@@ -181,6 +186,11 @@ const de: typeof en = {
       title: (p) => `Angriffspfad ${p.entry} → ${p.target} (Score ${p.score}) ohne Maßnahme`,
       why: () => 'Es gibt einen realistischen Weg von einem Einstiegspunkt zu einer kritischen Komponente, und keine Komponente auf dem Weg hat eine Maßnahme.',
       fix: () => 'Maßnahmen auf dem Pfad ergänzen, am besten am Einstiegspunkt oder vor der kritischen Komponente.',
+    },
+    M12: {
+      title: (p) => `${p.element} ist nicht mehr im importierten Modell`,
+      why: () => 'Das Element stammt aus einem früheren Import (z. B. Digital Fabric), fehlt aber im letzten Import. Die Architektur hier und im Quellmodell weichen voneinander ab.',
+      fix: () => 'Löschen, wenn es nicht mehr existiert. Bleibt es, den Hinweis in der Übersicht entfernen oder diesen Fund mit Begründung verwerfen.',
     },
   },
 };

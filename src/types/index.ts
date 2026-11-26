@@ -151,6 +151,8 @@ export interface NodeData extends Record<string, unknown> {
   exposure?: 'internet' | 'local-network' | 'physical' | 'none';
   authentication?: 'none' | 'password' | 'mfa' | 'certificate';
   personalData?: boolean;
+  // Imported earlier (e.g. from Digital Fabric) and missing in the latest import (src/utils/mergeImportedDiagram.ts)
+  importOrphan?: boolean;
 }
 
 // Narrowed views used in node components for convenience

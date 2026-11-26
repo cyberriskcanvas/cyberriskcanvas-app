@@ -1,13 +1,11 @@
 #!/usr/bin/env node
-// Smoke test of a running instance: login, the pages every user sees, and (per edition) that Pro-only routes
-// exist (Pro build) or are gone instead of dangling (core build).
+// Smoke test of authenticated product routes and CI token enforcement.
 //
-//   BASE_URL=http://localhost:3000 ADMIN_EMAIL=... ADMIN_PASSWORD=... DATABASE_URL=... node scripts/smoke.mjs [core|pro]
+//   BASE_URL=http://localhost:3000 ADMIN_EMAIL=... ADMIN_PASSWORD=... DATABASE_URL=... node scripts/smoke.mjs
 //
 // DATABASE_URL is used once, to put a project in the database so the editor and the reports page can be opened.
 import pg from 'pg';
 
-const edition = process.argv[2] === 'pro' ? 'pro' : 'core';
 const base = (process.env.BASE_URL ?? 'http://localhost:3000').replace(/\/$/, '');
 const email = process.env.ADMIN_EMAIL ?? 'smoke@example.com';
 const password = process.env.ADMIN_PASSWORD ?? 'Smoke-test-1';
@@ -30,7 +28,7 @@ check((await get('/api/openapi.json', { auth: false })).status === 200, 'GET /ap
 const anon = (await get('/dashboard', { auth: false })).status;
 check(anon === 307 || anon === 302, `GET /dashboard without a session redirects (${anon})`);
 const proApi = (await get('/api/ci/gate', { auth: false })).status;
-check(edition === 'pro' ? proApi === 401 : proApi === 404, `GET /api/ci/gate is ${edition === 'pro' ? '401 (needs a token)' : '404 (not part of the core edition)'} (${proApi})`);
+check(proApi === 401, `GET /api/ci/gate is 401 (needs a token) (${proApi})`);
 
 // ── login ────────────────────────────────────────────────────────────────────
 const csrf = await (await fetch(`${base}/api/auth/csrf`).then((r) => { keepCookies(r); return r; })).json();
@@ -63,14 +61,14 @@ for (const path of ['/dashboard', '/organisation', '/settings', '/admin', ...(di
   check(res.status === 200, `GET ${path} is 200 (${res.status})`);
 }
 const security = (await get('/security')).status;
-check(edition === 'pro' ? security === 200 : security === 404, `GET /security is ${edition === 'pro' ? '200' : '404 (not part of the core edition)'} (${security})`);
+check(security === 200, `GET /security is 200 (${security})`);
 
 // ── project routes of the Pro part ──────────────────────────────────────────
 if (diagramId) {
   const projectId = diagramId.slice(0, -1);
   const sbom = (await get(`/api/projects/${projectId}/vulnerabilities`)).status;
-  check(edition === 'pro' ? sbom === 403 || sbom === 200 : sbom === 404, `GET /api/projects/…/vulnerabilities is ${edition === 'pro' ? '200 or 403 (Pro licence)' : '404'} (${sbom})`);
+  check(sbom === 200, `GET /api/projects/…/vulnerabilities is 200 (${sbom})`);
 }
 
-console.warn(failed === 0 ? `\nsmoke test (${edition}): all checks passed` : `\nsmoke test (${edition}): ${failed} check(s) failed`);
+console.warn(failed === 0 ? '\nsmoke test: all checks passed' : `\nsmoke test: ${failed} check(s) failed`);
 process.exit(failed === 0 ? 0 : 1);

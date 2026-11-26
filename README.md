@@ -2,7 +2,7 @@
 
 Open-source cybersecurity engineering platform for product security teams - threat analysis & risk assessment (TARA), SBOM/vulnerability management, and compliance documentation under **IEC 62443**, **EU CRA**, and **NIS-2**. STRIDE-based threat modeling, zone/conduit mapping, and OSV.dev-backed vulnerability triage for automotive, industrial automation (OT/SCADA), and IoT teams. Self-hosted and collaborative: your data never leaves your infrastructure.
 
-> **Open Core** - The full TARA workflow is free and open source. [Pro features](#pro-license) are available with a license key. The Pro modules are not part of this repository, see [Docker images](#docker-images).
+All features are included under the Apache License 2.0. Self-hosting requires no product key.
 
 ![CyberRisk Canvas demo - visual architecture canvas with STRIDE threat classification and IEC 62443 zone/conduit mapping](docs/demo.gif)
 
@@ -28,7 +28,7 @@ See [cyberriskcanvas.com](https://cyberriskcanvas.com) for the EU CRA / IEC 6244
 
 ## Features
 
-### Community (free)
+### Architecture and risk analysis
 
 - Visual architecture canvas - drag-and-drop components, data flows, trust boundaries
 - TARA workflow - STRIDE classification, risk assessment, treatment tracking
@@ -41,7 +41,7 @@ See [cyberriskcanvas.com](https://cyberriskcanvas.com) for the EU CRA / IEC 6244
 - Team management (product teams + cross-functional review teams)
 - Self-hosted - your data never leaves your infrastructure
 
-### Pro (license key required)
+### Security operations and integrations
 
 - Audit-ready PDF export with company logo & CRA Annex VII technical dossier
 - **Project versioning** - freeze versions with TARA + SBOM snapshots, CSAF advisory global across versions
@@ -94,20 +94,19 @@ The app runs at `http://localhost:3000`. The first admin user is created automat
 | `ADMIN_PASSWORD` | ✓ | - | First admin user password |
 | `ADMIN_NAME` | | `Admin` | Display name for the first admin user |
 | `PORT` | | `3000` | Host port the app listens on |
-| `ANTHROPIC_API_KEY` | | - | Claude API key - required for AI features (Pro) |
+| `ANTHROPIC_API_KEY` | | - | Claude API key - required for AI features |
 | `SBOM_MAX_COMPONENTS` | | `20000` | Largest SBOM accepted (components) |
 | `CVE_SCAN_INTERVAL_HOURS` | | `24` | How often the built-in vulnerability monitoring re-scans all SBOMs (hours); `0` disables it |
 | `CVE_SCAN_SECRET` | | - | Bearer secret for the optional external trigger endpoint (`openssl rand -base64 32`); unset disables the endpoint |
 | `CVE_SCAN_INTERVAL_SECONDS` | | `21600` | Interval of the optional `cve-scan` sidecar (seconds) |
 | `DATABASE_URL` | | auto | Postgres connection string (auto-configured in Docker Compose) |
 
-> **Pro license** is activated in the admin UI at **Settings → License**, not via an environment variable.
 
 See [`.env.example`](.env.example) for the full list.
 
 ---
 
-## Project Versioning (Pro)
+## Project Versioning
 
 Each project follows a versioned lifecycle designed for CRA/IEC 62443 audit trails:
 
@@ -130,7 +129,7 @@ TARA and SBOM are version-scoped. The CSAF advisory and API keys are project-sco
 
 ---
 
-## CVE Monitoring & Security Overview (Pro)
+## CVE Monitoring & Security Overview
 
 SBOM uploads are checked against [OSV.dev](https://osv.dev/) on import, but new CVEs are disclosed continuously - a component that was clean yesterday can be vulnerable today. The app therefore **re-scans all SBOMs by itself** (default every 24 hours, started a few minutes after the server boots), so findings stay current without anyone re-uploading anything:
 
@@ -152,9 +151,9 @@ Admins and members of **review teams** additionally get a cross-project **Securi
 
 ---
 
-## REST API (Pro)
+## REST API
 
-All API endpoints require a valid **Pro license** and a **Bearer token** generated in **Settings → API Keys**.
+All API endpoints require authentication, for example a **Bearer token** generated in **Settings → API Keys**.
 
 ```http
 Authorization: Bearer crc_<your-key>
@@ -235,7 +234,7 @@ curl "$BASE/api/projects/$PROJECT/csaf" \
 
 ---
 
-## CI/CD Evidence & Release Gate (Pro)
+## CI/CD Evidence & Release Gate
 
 Pipelines upload SBOMs and scan results and can fail the build when the release gate does not pass. This uses **project-scoped CI tokens** (`crci_…`, created in *Operations → CI/CD*), which only reach `/api/ci/*` and are safe to store as a pipeline secret.
 
@@ -257,7 +256,7 @@ GitHub: `uses: cyberriskcanvas/cyberriskcanvas-app/ci@main` ([ci/action.yml](ci/
 
 **Release from the pipeline.** On a tag build, `CRC_RELEASE=v1.2.0 sh crc.sh sbom=...` (Action input `release`) freezes the active version with that label once the gate passes; a retried job with the same label changes nothing (`POST /api/ci/release?label=...`). **Issues.** `public/ci/sync-issues.sh` (Action input `issues`, GitLab job `.crc-issues`) opens a GitHub or GitLab issue for every open measure and failed security test and closes it when it is done. Canvas stores no tracker credentials, the pipeline uses its own token. **Pull and merge requests.** Action input `comment: 'true'` posts the gate result as a comment on the pull request. The GitLab template writes the gate result as a JUnit report (`artifacts:reports:junit`, shown in the merge request's test widget in every GitLab tier) and, with a `GITLAB_TOKEN` variable, posts it as a merge request comment in merge request pipelines that is updated on every run (`CRC_JUNIT`, `CRC_MR_COMMENT`; `GET /api/ci/gate?format=junit` for other CI systems). See `/api/api-docs` for the endpoints.
 
-## Single Sign-On (Pro)
+## Single Sign-On
 
 Let users authenticate through your organization's identity provider instead of (or in addition to) email/password. Supported out of the box:
 
@@ -288,7 +287,7 @@ Register the redirect URI with your identity provider:
 
 **How it works:**
 
-- "Sign in with ..." buttons appear on the login page automatically once the corresponding environment variables are set and the instance has a **Pro** license.
+- "Sign in with ..." buttons appear on the login page automatically once the corresponding environment variables are set.
 - Accounts are **provisioned just-in-time**: the first successful sign-in creates the user (matched by e-mail from the IdP). An admin still needs to add the new user to a team in **Settings → Teams**, exactly as for manually created accounts.
 - Email/password sign-in keeps working alongside SSO - existing accounts are unaffected.
 
@@ -296,24 +295,7 @@ Register the redirect URI with your identity provider:
 
 ## Docker images
 
-| Image | Contains | Built from |
-|---|---|---|
-| `ghcr.io/cyberriskcanvas/cyberriskcanvas-app` | The open-source core edition: everything in this repository. Pro features show a hint instead. | this repository, on every push to `main` |
-| `ghcr.io/cyberriskcanvas/cyberriskcanvas-pro` | The full product. Without a license key it behaves like the free tier; with a key from [cyberriskcanvas.com/pricing](https://cyberriskcanvas.com/de#pricing) (Settings → License) the Pro features unlock. | the private Pro repository |
-
-`docker-compose.yml` uses the core image. To run the Pro image, set `CRC_IMAGE=ghcr.io/cyberriskcanvas/cyberriskcanvas-pro:latest` in `.env`; nothing else changes, your data stays.
-
-## Pro License
-
-Pro features require a valid license key from [cyberriskcanvas.com/pricing](https://cyberriskcanvas.com/de#pricing).
-
-| Tier | Monthly | Annual |
-| --- | --- | --- |
-| Pro | €249/mo | €2,490/yr |
-
-After purchase, enter the license key in the admin UI at **Settings → License**. The app validates the key once per day - no other data is transmitted.
-
----
+Use `ghcr.io/cyberriskcanvas/cyberriskcanvas-app` for the full application. When upgrading from the legacy Pro image, back up PostgreSQL and persistent volumes, set `CRC_IMAGE` to the new app image in your Compose environment, then pull and restart with the same volumes.
 
 ## Development
 
@@ -353,12 +335,10 @@ yarn dev
 
 ## Contributing
 
-Open an [issue](https://github.com/cyberriskcanvas/cyberriskcanvas-app/issues) before submitting large changes. Pull requests are welcome.
+Code, tests, translations and documentation are welcome across the whole app. See [Contributing](CONTRIBUTING.md) for a first contribution, local setup and the fork-to-PR workflow.
 
 ---
 
 ## License
 
-[Elastic License 2.0 (ELv2)](LICENSE)
-
-Free to self-host and use internally. You may not offer the software as a hosted or managed service to third parties. Pro features are protected by the license key mechanism and may not be circumvented.
+[Apache License 2.0](LICENSE)

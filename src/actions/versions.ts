@@ -5,19 +5,27 @@ import { prisma } from '@/lib/db';
 import { assertDiagramAccess, assertDiagramWriteAccess } from '@/lib/access';
 import { checkTierFeature } from '@/lib/tierGuard';
 import { isTierBlock } from '@/lib/tierBlock';
+import { MANUAL_VERSION_LIMIT, selectVersionsToPrune } from '@/lib/versionRetention';
+
+const listSelect = {
+  id: true, message: true, createdAt: true, projectVersionId: true,
+  user: { select: { id: true, name: true, color: true } },
+} as const;
 
 export async function listVersions(diagramId: string) {
   const session = await requireSession();
   await assertDiagramAccess(diagramId, session.user.id);
-  return prisma.diagramVersion.findMany({
-    where: { diagramId },
-    orderBy: { createdAt: 'desc' },
-    take: 50,
-    select: {
-      id: true, message: true, createdAt: true,
-      user: { select: { id: true, name: true, color: true } },
-    },
-  });
+  // Freeze snapshots are listed in full so they never drop out of sight behind newer manual versions.
+  const [snapshots, manual] = await Promise.all([
+    prisma.diagramVersion.findMany({ where: { diagramId, projectVersionId: { not: null } }, select: listSelect }),
+    prisma.diagramVersion.findMany({
+      where: { diagramId, projectVersionId: null },
+      orderBy: { createdAt: 'desc' },
+      take: MANUAL_VERSION_LIMIT,
+      select: listSelect,
+    }),
+  ]);
+  return [...snapshots, ...manual].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
 }
 
 export async function createVersion(
@@ -33,7 +41,7 @@ export async function createVersion(
   const session = await requireSession();
   await assertDiagramWriteAccess(diagramId, session.user.id);
 
-  const diagram = await prisma.diagram.findUnique({ where: { id: diagramId } });
+  const diagram = await prisma.diagram.findUnique({ where: { id: diagramId, deletedAt: null } });
   if (!diagram) throw new Error('Diagram not found');
 
   const version = await prisma.diagramVersion.create({
@@ -48,14 +56,14 @@ export async function createVersion(
     include: { user: { select: { id: true, name: true, color: true } } },
   });
 
-  const old = await prisma.diagramVersion.findMany({
+  const all = await prisma.diagramVersion.findMany({
     where: { diagramId },
-    orderBy: { createdAt: 'desc' },
-    skip: 50,
-    select: { id: true },
+    select: { id: true, createdAt: true, projectVersionId: true },
   });
-  if (old.length > 0) {
-    await prisma.diagramVersion.deleteMany({ where: { id: { in: old.map((v) => v.id) } } });
+  const prune = selectVersionsToPrune(all);
+  if (prune.length > 0) {
+    // projectVersionId: null again here so a snapshot can never be deleted through this path.
+    await prisma.diagramVersion.deleteMany({ where: { id: { in: prune }, projectVersionId: null } });
   }
 
   return version;
@@ -77,7 +85,7 @@ export async function restoreVersion(diagramId: string, versionId: string) {
   const version = await prisma.diagramVersion.findFirst({ where: { id: versionId, diagramId } });
   if (!version) throw new Error('Version not found');
 
-  const current = await prisma.diagram.findUnique({ where: { id: diagramId } });
+  const current = await prisma.diagram.findUnique({ where: { id: diagramId, deletedAt: null } });
   if (current) {
     await prisma.diagramVersion.create({
       data: {
@@ -92,7 +100,7 @@ export async function restoreVersion(diagramId: string, versionId: string) {
   }
 
   return prisma.diagram.update({
-    where: { id: diagramId },
+    where: { id: diagramId, deletedAt: null },
     data: {
       nodes: version.nodes as object,
       edges: version.edges as object,

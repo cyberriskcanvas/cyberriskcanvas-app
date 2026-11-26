@@ -8,7 +8,7 @@ import { useT } from '@/hooks/useT';
 const SL_OPTIONS = ['SL-1', 'SL-2', 'SL-3', 'SL-4'] as const;
 const PART_OPTIONS = ['4-2', '3-3'] as const;
 
-const HW_TYPES: HardwareComponentType[] = ['ecu', 'sensor', 'actuator', 'gateway', 'hsm', 'obd', 'telematics', 'custom'];
+const HW_TYPES: HardwareComponentType[] = ['ecu', 'sensor', 'actuator', 'gateway', 'hsm', 'obd', 'telematics', 'plc', 'hmi', 'historian', 'rtu', 'custom'];
 const SW_TYPES: SoftwareComponentType[] = ['os', 'firmware', 'application', 'library', 'network_service', 'bootloader', 'custom'];
 const B_TYPES: BoundaryType[] = ['trust-zone', 'network-segment', 'physical-zone', 'logical-zone', 'cloud-zone'];
 
@@ -44,6 +44,14 @@ export function OverviewTab({ nodeId, data, nodeType }: Props) {
 
   return (
     <div className="space-y-4 p-4">
+      {data.importOrphan && (
+        <div role="status" className="flex items-start justify-between gap-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+          <span>{ov.importOrphan}</span>
+          <button type="button" onClick={() => save({ importOrphan: undefined })} className="shrink-0 font-semibold underline">
+            {ov.clearOrphan}
+          </button>
+        </div>
+      )}
       <Field label={ov.name}>
         <input
           value={label}

@@ -288,8 +288,8 @@ Register the redirect URI with your identity provider:
 **How it works:**
 
 - "Sign in with ..." buttons appear on the login page automatically once the corresponding environment variables are set.
-- Accounts are **provisioned just-in-time**: the first successful sign-in creates the user (matched by e-mail from the IdP). An admin still needs to add the new user to a team in **Settings → Teams**, exactly as for manually created accounts.
-- Email/password sign-in keeps working alongside SSO - existing accounts are unaffected.
+- Accounts are **provisioned just-in-time** from a verified e-mail address: generic OIDC must return `email_verified: true`. Microsoft Entra ID must return `verified_primary_email` as an [optional ID-token claim](https://learn.microsoft.com/en-us/entra/identity-platform/optional-claims-reference). The ordinary Entra `email` claim alone is not accepted for account matching. An admin still needs to add the new user to a team in **Settings → Teams**, exactly as for manually created accounts.
+- Email/password sign-in keeps working alongside SSO. Existing SSO accounts need the verified claim above to continue signing in.
 
 ---
 

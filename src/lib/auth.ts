@@ -7,6 +7,7 @@ import { getTier } from './tierLimits';
 import { TIER_CONFIG } from './tierConfig';
 import { AVATAR_COLORS } from './constants';
 import { isLoginBlocked, registerFailedLogin, clearLoginFailures } from './loginRateLimit';
+import { verifiedSsoEmail } from './ssoEmail';
 
 /**
  * External identity providers (SSO), configured via env vars and gated behind
@@ -138,14 +139,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       const tier = await getTier();
       if (!TIER_CONFIG[tier].sso) return '/login?error=SsoRequiresPro';
 
-      const email = String(profile?.email ?? user.email ?? '').toLowerCase();
-      if (!email) return '/login?error=SsoNoEmail';
-
-      // Accounts are linked purely by e-mail, so an unverified address at the
-      // IdP would allow taking over an existing local account. Reject when the
-      // IdP explicitly marks the address unverified; absent claims are allowed
-      // because some IdPs (e.g. Microsoft Entra ID) never send email_verified.
-      if (profile?.email_verified === false) return '/login?error=SsoEmailUnverified';
+      const email = verifiedSsoEmail(account.provider, profile);
+      if (!email) return '/login?error=SsoEmailUnverified';
 
       // Just-in-time provisioning: create the account on first SSO login.
       // Team membership stays an admin task, same as for manually created users.
@@ -171,7 +166,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         // not our database id - resolve the local account by e-mail instead.
         let userId = user.id;
         if (account && account.provider !== 'credentials') {
-          const email = String(profile?.email ?? user.email ?? '').toLowerCase();
+          const email = verifiedSsoEmail(account.provider, profile);
           const dbUser = email ? await prisma.user.findUnique({ where: { email } }) : null;
           if (!dbUser) return token;
           userId = dbUser.id;

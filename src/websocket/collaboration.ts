@@ -1,6 +1,6 @@
 import { Server, Socket } from 'socket.io';
 import { flushDiagram } from '@/lib/redis';
-import { canAccessProject } from '@/lib/access';
+import { assertDiagramWriteAccess, canAccessProject } from '@/lib/access';
 import { prisma } from '@/lib/db';
 
 interface CollabUser {
@@ -73,19 +73,31 @@ export function registerCollaboration(io: Server): void {
       });
     });
 
-    socket.on('nodes-changed', ({ nodes }: { nodes: unknown[] }) => {
-      if (!currentDiagramId || !currentUserId) return;
-      socket.to(currentDiagramId).emit('nodes-changed', { nodes, userId: currentUserId });
+    async function relayChange(event: string, value: unknown, field: string) {
+      const diagramId = currentDiagramId;
+      if (!diagramId || !currentUserId) return;
+      try {
+        await assertDiagramWriteAccess(diagramId, userId);
+      } catch {
+        socket.emit('error', { message: 'Access denied' });
+        return;
+      }
+      if (currentDiagramId !== diagramId) return;
+      socket.to(diagramId).emit(event, { [field]: value, userId });
+    }
+
+    socket.on('nodes-changed', (payload: { nodes?: unknown } | undefined) => {
+      if (Array.isArray(payload?.nodes)) void relayChange('nodes-changed', payload.nodes, 'nodes');
     });
 
-    socket.on('edges-changed', ({ edges }: { edges: unknown[] }) => {
-      if (!currentDiagramId || !currentUserId) return;
-      socket.to(currentDiagramId).emit('edges-changed', { edges, userId: currentUserId });
+    socket.on('edges-changed', (payload: { edges?: unknown } | undefined) => {
+      if (Array.isArray(payload?.edges)) void relayChange('edges-changed', payload.edges, 'edges');
     });
 
-    socket.on('viewport-changed', ({ viewport }: { viewport: unknown }) => {
-      if (!currentDiagramId || !currentUserId) return;
-      socket.to(currentDiagramId).emit('viewport-changed', { viewport, userId: currentUserId });
+    socket.on('viewport-changed', (payload: { viewport?: unknown } | undefined) => {
+      if (payload?.viewport && typeof payload.viewport === 'object' && !Array.isArray(payload.viewport)) {
+        void relayChange('viewport-changed', payload.viewport, 'viewport');
+      }
     });
 
     socket.on('leave-diagram', () => leaveCurrentRoom(socket, io));

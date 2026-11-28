@@ -23,7 +23,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <html lang="en" className={`${inter.variable} ${jetbrainsMono.variable}`}>
       <body className="bg-gray-950 text-gray-100 antialiased font-sans">
-        <Providers isPro isTrial={false}>
+        <Providers>
           {children}
         </Providers>
       </body>

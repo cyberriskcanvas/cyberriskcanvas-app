@@ -4,7 +4,7 @@ import { useDiagramStore } from '@/store/diagramStore';
 import { useProjectStore } from '@/store/projectStore';
 import type { NodeData, Threat, Risk, RiskLevel } from '@/types';
 import { useT } from '@/hooks/useT';
-import { AISuggestCwe } from '@/pro/ui';
+import { AISuggestCwe } from '@/features/ui';
 import { searchCwe, type CweEntry } from '@/data/cwe';
 import { cn } from '@/utils/cn';
 import {

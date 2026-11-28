@@ -42,7 +42,7 @@ const en = {
   techdoc: {
     intro: 'Points the dossier cannot cover itself. Add a short text, attach a document, or both. The PDF dossier then shows the point as provided.',
     note: 'Note / reference', attach: 'Attach a document', none: '- none -',
-    noDocuments: 'No project documents yet. Upload PDFs in the Documents tab (Pro).',
+    noDocuments: 'No project documents yet. Upload PDFs in the Documents tab.',
     state: { dossier: 'In the dossier', provided: 'Provided', partial: 'Partly', separate: 'Missing' } as Record<AnnexViiState, string>,
     points: { '1a': 'Intended purpose', '1b': 'Software versions affecting compliance', '1c': 'Photos or illustrations (hardware)', '1d': 'User information and instructions (Annex II)', '2b': 'Vulnerability handling processes, incl. secure update distribution', '2c': 'Production and monitoring processes and their validation', '4': 'Information used to determine the support period', '5': 'Applied standards / solutions chosen instead', '6': 'Reports of the conformity tests', '7': 'Copy of the EU declaration of conformity' } as Record<AnnexViiKey, string>,
   },
@@ -93,7 +93,7 @@ const de: typeof en = {
   techdoc: {
     intro: 'Punkte, die das Dossier nicht selbst abdecken kann. Ergänzen Sie einen kurzen Text, hängen Sie ein Dokument an, oder beides. Das PDF-Dossier zeigt den Punkt dann als bereitgestellt.',
     note: 'Hinweis / Verweis', attach: 'Dokument anhängen', none: '- keins -',
-    noDocuments: 'Noch keine Projektdokumente. PDFs laden Sie im Tab Dokumente hoch (Pro).',
+    noDocuments: 'Noch keine Projektdokumente. PDFs laden Sie im Tab Dokumente hoch.',
     state: { dossier: 'Im Dossier', provided: 'Bereitgestellt', partial: 'Teilweise', separate: 'Fehlt' } as Record<AnnexViiState, string>,
     points: { '1a': 'Bestimmungsgemäßer Zweck', '1b': 'Softwareversionen mit Einfluss auf die Konformität', '1c': 'Fotos oder Abbildungen (Hardware)', '1d': 'Nutzerinformationen und Anleitungen (Anhang II)', '2b': 'Prozesse der Schwachstellenbehandlung, inkl. sichere Update-Verteilung', '2c': 'Produktions- und Überwachungsprozesse und deren Validierung', '4': 'Angaben zur Bestimmung des Supportzeitraums', '5': 'Angewandte Normen / stattdessen gewählte Lösungen', '6': 'Berichte der Konformitätsprüfungen', '7': 'Kopie der EU-Konformitätserklärung' } as Record<AnnexViiKey, string>,
   },

@@ -5,8 +5,6 @@ import type { CweSuggestion } from '@/types/ai';
 import { useDiagramStore } from '@/store/diagramStore';
 import type { NodeData, Threat } from '@/types';
 import { cn } from '@/utils/cn';
-import { useTierGuard } from '@/hooks/useTierGuard';
-import { PaywallModal } from '@/components/Paywall/PaywallModal';
 
 const STRIDE_COLORS: Record<Threat['stride'], string> = {
   S: 'bg-red-900/60 text-red-300', T: 'bg-orange-900/60 text-orange-300',
@@ -18,7 +16,6 @@ interface Props { nodeId: string; nodeType: string; data: NodeData }
 
 export function AISuggestCwe({ nodeId, nodeType, data }: Props) {
   const { updateNodeData } = useDiagramStore();
-  const guard = useTierGuard('ai.suggest');
   const [loading, setLoading] = useState(false);
   const [suggestions, setSuggestions] = useState<CweSuggestion[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -62,16 +59,13 @@ export function AISuggestCwe({ nodeId, nodeType, data }: Props) {
           <span className="text-xs font-semibold text-gray-300">AI: CWE Suggestions</span>
         </div>
         <button
-          onClick={() => guard.allowed ? fetch() : guard.showPaywall()}
+          onClick={fetch}
           disabled={loading}
           className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-blue-500 disabled:opacity-50"
         >
           {loading ? <Loader2 size={11} className="animate-spin" /> : <Sparkles size={11} />}
           {loading ? 'Analyzing…' : 'Suggest CWEs'}
         </button>
-        {guard.paywallVisible && (
-          <PaywallModal currentTier={guard.tier} requiredTier={guard.requiredTier} onClose={guard.hidePaywall} />
-        )}
       </div>
 
       {error && (

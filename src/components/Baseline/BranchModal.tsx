@@ -3,8 +3,6 @@
 import { useState } from 'react';
 import { GitBranch, X } from 'lucide-react';
 import { branchProject } from '@/actions/baselines';
-import { isTierBlock } from '@/lib/tierBlock';
-import { usePaywallStore } from '@/store/paywallStore';
 import { useRouter } from 'next/navigation';
 import { useChromeT } from '@/i18n/chrome';
 
@@ -19,7 +17,6 @@ export function BranchModal({ projectId, suggestedName, lockedLabel, onClose }: 
   const [name, setName] = useState(suggestedName);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const showPaywall = usePaywallStore((s) => s.showPaywall);
   const router = useRouter();
   const { t } = useChromeT();
 
@@ -30,11 +27,6 @@ export function BranchModal({ projectId, suggestedName, lockedLabel, onClose }: 
     setError('');
     try {
       const result = await branchProject(projectId, name);
-      if (isTierBlock(result)) {
-        showPaywall(result.requiredTier);
-        onClose();
-        return;
-      }
       if (result.firstDiagramId) {
         router.push(`/diagram/${result.firstDiagramId}`);
       } else {

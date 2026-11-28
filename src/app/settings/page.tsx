@@ -2,7 +2,6 @@ import type { Metadata } from 'next';
 import { auth } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import { prisma } from '@/lib/db';
-import { getTier } from '@/lib/tierLimits';
 import SettingsClient from '@/components/Settings/SettingsClient';
 
 export const metadata: Metadata = {
@@ -17,7 +16,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
   const session = await auth();
   if (!session?.user?.id) redirect('/login');
 
-  const [user, apiKeys, tier] = await Promise.all([
+  const [user, apiKeys] = await Promise.all([
     prisma.user.findUnique({
       where: { id: session.user.id },
       select: {
@@ -34,7 +33,6 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
       select: { id: true, name: true, prefix: true, lastUsedAt: true, createdAt: true },
       orderBy: { createdAt: 'desc' },
     }),
-    getTier(),
   ]);
 
   if (!user) redirect('/login');
@@ -50,7 +48,6 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
         companyLogo: user.companyLogo ?? '',
         hasPassword: !!user.passwordHash,
         role: user.role,
-        isPro: tier === 'pro',
         memberships: user.memberships.map((m) => ({
           id: m.id,
           role: m.role,

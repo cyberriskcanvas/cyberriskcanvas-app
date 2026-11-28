@@ -3,7 +3,6 @@
 import { requireSession } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { isReviewerOrAdmin } from '@/lib/access';
-import { requireTierFeature } from '@/lib/tierGuard';
 import { activeVersionIds, loadFindings } from '@/lib/findings';
 import { severityRank } from '@/lib/cvss';
 import { visibleProjectIds } from './projects';
@@ -69,7 +68,6 @@ export interface SecurityOverview {
 
 export async function getSecurityOverview(): Promise<SecurityOverview> {
   const session = await requireSession();
-  await requireTierFeature('sbom');
   if (!(await isReviewerOrAdmin(session.user.id, session.user.role))) throw new Error('Access denied');
 
   const ids = await visibleProjectIds(session.user.id);

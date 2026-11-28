@@ -13,8 +13,7 @@ const SPEC = {
       'SBOM upload, vulnerability triage, and VEX/CSAF export.',
       '',
       '## Authentication',
-      'All endpoints require a **Pro license**. Create API keys in',
-      '**Settings → API Keys** and pass them as a Bearer token:',
+      'Create API keys in **Settings → API Keys** and pass them as a Bearer token:',
       '```',
       'Authorization: Bearer crc_<your-key>',
       '```',
@@ -279,7 +278,7 @@ const SPEC = {
         content: { 'application/json': { schema: { '$ref': '#/components/schemas/Error' } } },
       },
       Forbidden: {
-        description: 'Valid key but Pro license required, or insufficient project access.',
+        description: 'Valid key but insufficient project access.',
         content: { 'application/json': { schema: { '$ref': '#/components/schemas/Error' } } },
       },
       NotFound: {

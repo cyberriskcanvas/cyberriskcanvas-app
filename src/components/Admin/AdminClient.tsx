@@ -8,8 +8,8 @@ import {
 } from 'lucide-react';
 import { createUser, updateUser, deleteUser } from '@/actions/auth';
 import { listAuditLog, type AuditLogPage } from '@/actions/audit';
-import { AlertChannelsSection } from '@/pro/ui';
-import type { listAlertChannels } from '@/pro/server';
+import { AlertChannelsSection } from '@/features/ui';
+import type { listAlertChannels } from '@/features/server';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -32,7 +32,6 @@ interface Team {
 interface Props {
   initialUsers: User[];
   initialTeams: Team[];
-  isPro: boolean;
   initialAlertChannels: Awaited<ReturnType<typeof listAlertChannels>>;
   initialAuditLog: AuditLogPage;
 }
@@ -194,7 +193,7 @@ function UserModal({
 
 type Section = 'users' | 'teams' | 'alerts' | 'audit';
 
-export default function AdminClient({ initialUsers, initialTeams, isPro, initialAlertChannels, initialAuditLog }: Props) {
+export default function AdminClient({ initialUsers, initialTeams, initialAlertChannels, initialAuditLog }: Props) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [section, setSection] = useState<Section>('users');
@@ -371,7 +370,7 @@ export default function AdminClient({ initialUsers, initialTeams, isPro, initial
               )}
 
               {section === 'alerts' && (
-                <AlertChannelsSection isPro={isPro} initialChannels={initialAlertChannels} />
+                <AlertChannelsSection initialChannels={initialAlertChannels} />
               )}
 
               {section === 'audit' && (
@@ -413,7 +412,7 @@ function AuditLogSection({ initial }: { initial: AuditLogPage }) {
       <div className="border-b border-gray-800 px-6 py-4">
         <h2 className="text-base font-semibold text-white">Audit Log</h2>
         <p className="text-xs text-gray-500 mt-0.5">
-          Security-relevant actions: user management, teams, license, API keys, deletions, version freezes.
+          Security-relevant actions: user management, teams, API keys, deletions, version freezes.
         </p>
       </div>
 

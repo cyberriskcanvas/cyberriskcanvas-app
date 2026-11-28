@@ -20,7 +20,7 @@ import { aggregateDiagram, countDrafts, hasTemplateThreats } from '@/utils/aggre
 import type { CraChecklist } from '@/lib/craChecklist';
 import { applyDismissals, checkModel } from '@/utils/modelCheck';
 import type { AnnexViiRow } from '@/utils/docGenerators';
-import { exportPdf, PRO_EDITION } from '@/pro/ui';
+import { exportPdf } from '@/features/ui';
 import { SummaryCards } from '@/components/Dashboard/SummaryCards';
 import { RiskHeatmap } from '@/components/Dashboard/RiskHeatmap';
 import { ThreatsBreakdown } from '@/components/Dashboard/ThreatsBreakdown';
@@ -156,8 +156,6 @@ export default function DashboardClient({ diagramId, projectId, diagramName, ini
                     BSI &amp; CRA Exportformate
                   </div>
 
-                  {PRO_EDITION && (
-                    <>
                       <a
                         href={`/api/projects/${projectId}/sbom/export?format=cyclonedx`}
                         download
@@ -222,8 +220,6 @@ export default function DashboardClient({ diagramId, projectId, diagramName, ini
                           <div className="text-[10px] text-[#6b6460]">{pt.misc.export.oscal}</div>
                         </div>
                       </a>
-                    </>
-                  )}
 
                   <button
                     onClick={() => {

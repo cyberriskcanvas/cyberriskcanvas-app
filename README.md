@@ -2,7 +2,7 @@
 
 Open-source cybersecurity engineering platform for product security teams - threat analysis & risk assessment (TARA), SBOM/vulnerability management, and compliance documentation under **IEC 62443**, **EU CRA**, and **NIS-2**. STRIDE-based threat modeling, zone/conduit mapping, and OSV.dev-backed vulnerability triage for automotive, industrial automation (OT/SCADA), and IoT teams. Self-hosted and collaborative: your data never leaves your infrastructure.
 
-All features are included under the Apache License 2.0. Self-hosting requires no product key.
+All features are included under the Apache License 2.0.
 
 ![CyberRisk Canvas demo - visual architecture canvas with STRIDE threat classification and IEC 62443 zone/conduit mapping](docs/demo.gif)
 
@@ -295,7 +295,7 @@ Register the redirect URI with your identity provider:
 
 ## Docker images
 
-Use `ghcr.io/cyberriskcanvas/cyberriskcanvas-app` for the full application. When upgrading from the legacy Pro image, back up PostgreSQL and persistent volumes, set `CRC_IMAGE` to the new app image in your Compose environment, then pull and restart with the same volumes.
+Use `ghcr.io/cyberriskcanvas/cyberriskcanvas-app` for the full application. When upgrading from an older image, back up PostgreSQL and persistent volumes, set `CRC_IMAGE` to the new app image in your Compose environment, then pull and restart with the same volumes.
 
 ## Development
 

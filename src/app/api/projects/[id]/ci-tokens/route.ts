@@ -2,7 +2,6 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { assertProjectWriteAccess } from '@/lib/access';
-import { requireTierFeature, TierError } from '@/lib/tierGuard';
 import { generateApiKey } from '@/lib/apiAuth';
 import { audit } from '@/lib/audit';
 
@@ -36,13 +35,6 @@ export async function GET(_req: NextRequest, ctx: RouteContext) {
 export async function POST(req: NextRequest, ctx: RouteContext) {
   const a = await authorize(ctx);
   if ('error' in a) return a.error;
-
-  try {
-    await requireTierFeature('api');
-  } catch (err) {
-    if (err instanceof TierError) return NextResponse.json({ error: err.message }, { status: 403 });
-    throw err;
-  }
 
   let body: { name?: string };
   try {

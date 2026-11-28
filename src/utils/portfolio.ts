@@ -9,7 +9,7 @@ export interface ProductSummary {
   /** First station that is not done; null when the whole roadmap is done. */
   currentStation: StationId | null;
   gate: GateState;
-  /** Untriaged high/critical findings; null without CI/SBOM access (free tier). */
+  /** Untriaged high/critical findings; null without CI/SBOM data. */
   openHigh: number | null;
   art14: { open: number; overdue: number };
   supportDays: number | null;

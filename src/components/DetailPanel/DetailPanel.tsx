@@ -12,7 +12,6 @@ import { SecurityTestsTab } from './tabs/SecurityTestsTab';
 import { EdgeOverviewTab } from './tabs/EdgeOverviewTab';
 import { cn } from '@/utils/cn';
 import type { NodeData, Risk, SecurityTest } from '@/types';
-import { PaywallModal } from '@/components/Paywall/PaywallModal';
 import { useTourStore } from '@/store/tourStore';
 
 interface Tab {
@@ -37,7 +36,6 @@ export function DetailPanel() {
   const isLocked = activeVersion?.status === 'frozen';
   const [activeTab, setActiveTab] = useState('overview');
   const { panelTab } = useTourStore();
-  const [paywallTab, setPaywallTab] = useState<string | null>(null);
   const [width, setWidth] = useState(DEFAULT_WIDTH);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
@@ -268,13 +266,6 @@ export function DetailPanel() {
         {activeTab === 'security-tests' && <SecurityTestsTab nodeId={selectedNodeId} data={data} />}
       </div>
 
-      {paywallTab && (
-        <PaywallModal
-          currentTier="free"
-          requiredTier="pro"
-          onClose={() => setPaywallTab(null)}
-        />
-      )}
     </div>
   );
 }

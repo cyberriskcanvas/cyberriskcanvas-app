@@ -1,12 +1,12 @@
 import { prisma } from './db';
 
 /**
- * Audit trail for security-relevant actions (user management, license
- * changes, deletions, …). Entries are written fire-and-forget: a failing
+ * Audit trail for security-relevant actions (user management,
+ * deletions, …). Entries are written fire-and-forget: a failing
  * audit write is logged to stderr but never breaks the action itself.
  *
  * `details` must stay small and free of secrets - names, roles, hosts,
- * counts are fine; passwords, license keys, or webhook paths are not.
+ * counts are fine; passwords or webhook paths are not.
  */
 
 export type AuditAction =
@@ -15,8 +15,6 @@ export type AuditAction =
   | 'user.delete'
   | 'user.password_change'
   | 'account.delete'
-  | 'license.save'
-  | 'license.remove'
   | 'alert_channel.create'
   | 'alert_channel.update'
   | 'alert_channel.delete'
@@ -49,7 +47,7 @@ export interface AuditEntry {
   /** null for system events (e.g. bootstrap). */
   actorId?: string | null;
   actorEmail?: string | null;
-  targetType?: 'user' | 'license' | 'alert_channel' | 'team' | 'api_key' | 'ci_token' | 'ci_run' | 'assessment' | 'document' | 'evidence' | 'project' | 'version' | 'policy';
+  targetType?: 'user' | 'alert_channel' | 'team' | 'api_key' | 'ci_token' | 'ci_run' | 'assessment' | 'document' | 'evidence' | 'project' | 'version' | 'policy';
   targetId?: string;
   details?: Record<string, string | number | boolean | null>;
 }

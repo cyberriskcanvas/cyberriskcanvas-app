@@ -3,7 +3,7 @@ import { sanitizeCraChecklist, type CraChecklist } from './craChecklist';
 import { mergeChecklist, ORG_REQUIREMENTS } from './organisation';
 import { getOrg } from './organisationStore';
 import { sanitizeDocData } from './docData';
-import { incidentCounts } from '@/pro/server';
+import { incidentCounts } from '@/features/server';
 import { generateAnnexII, generateDeclaration, type ProductFacts } from '@/utils/docGenerators';
 import type { JourneyData } from '@/utils/deriveJourney';
 

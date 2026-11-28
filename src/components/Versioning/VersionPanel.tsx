@@ -1,8 +1,6 @@
 import { useEffect, useState } from 'react';
 import { X, History, RotateCcw, Clock, User, MessageSquare, Plus, Loader2 } from 'lucide-react';
 import { listVersions, createVersion, getVersion, restoreVersion } from '@/actions/versions';
-import { isTierBlock } from '@/lib/tierBlock';
-import { usePaywallStore } from '@/store/paywallStore';
 import { useDiagramStore } from '@/store/diagramStore';
 import type { DiagramNode, DiagramEdge } from '@/types';
 import { cn } from '@/utils/cn';
@@ -44,11 +42,6 @@ export function VersionPanel({ diagramId, onClose, userName }: Props) {
     setSaving(true);
     try {
       const result = await createVersion(diagramId, nodes, edges, viewport, message.trim() || undefined);
-      if (isTierBlock(result)) {
-        setShowSaveForm(false);
-        usePaywallStore.getState().showPaywall(result.requiredTier);
-        return;
-      }
       const v = result as DiagramVersionMeta;
       setVersions((prev) => [v, ...prev]);
       setMessage('');

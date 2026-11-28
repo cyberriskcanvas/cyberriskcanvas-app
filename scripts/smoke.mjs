@@ -63,7 +63,7 @@ for (const path of ['/dashboard', '/organisation', '/settings', '/admin', ...(di
 const security = (await get('/security')).status;
 check(security === 200, `GET /security is 200 (${security})`);
 
-// ── project routes of the Pro part ──────────────────────────────────────────
+// ── project routes ──────────────────────────────────────────
 if (diagramId) {
   const projectId = diagramId.slice(0, -1);
   const sbom = (await get(`/api/projects/${projectId}/vulnerabilities`)).status;

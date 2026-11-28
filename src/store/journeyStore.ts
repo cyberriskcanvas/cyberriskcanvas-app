@@ -30,7 +30,7 @@ export const useJourneyStore = create<JourneyStore>((set, get) => ({
     if (get().projectId !== projectId) set({ projectId, data: null, ci: null, dismissed: {} });
     getJourneyData(projectId).then((data) => get().projectId === projectId && set({ data })).catch(() => {});
     getModelCheckDismissed(projectId).then((dismissed) => get().projectId === projectId && set({ dismissed })).catch(() => {});
-    // Free tier or no access: 403/404, then CI-based checks stay open with a hint
+    // No access: 403/404, then CI-based checks stay open with a hint
     fetch(`/api/projects/${projectId}/ci/runs`)
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => get().projectId === projectId && set({ ci: d ? { latest: d.latest ?? [], reasons: d.gate?.reasons ?? [] } : null }))

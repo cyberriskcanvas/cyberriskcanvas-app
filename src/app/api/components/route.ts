@@ -1,6 +1,5 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { authenticateRequest } from '@/lib/apiAuth';
-import { TIER_CONFIG } from '@/lib/tierConfig';
 import { listComponents } from '@/lib/inventory';
 import { resolveCiVersion } from '@/lib/ciVersion';
 import { visibleProjectIds } from '@/actions/projects';
@@ -13,7 +12,6 @@ import { visibleProjectIds } from '@/actions/projects';
 export async function GET(req: NextRequest) {
   const authResult = await authenticateRequest(req);
   if (!authResult) return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
-  if (!TIER_CONFIG[authResult.tier].sbom) return NextResponse.json({ error: 'This feature requires a valid Pro license.' }, { status: 403 });
 
   const p = req.nextUrl.searchParams;
   const query = (['q', 'purl', 'name', 'license', 'cve'].map((k) => p.get(k)).find(Boolean) ?? '').trim().slice(0, 200);

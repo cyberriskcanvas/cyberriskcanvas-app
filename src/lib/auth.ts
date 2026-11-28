@@ -3,16 +3,13 @@ import Credentials from 'next-auth/providers/credentials';
 import MicrosoftEntraID from 'next-auth/providers/microsoft-entra-id';
 import bcrypt from 'bcryptjs';
 import { prisma } from './db';
-import { getTier } from './tierLimits';
-import { TIER_CONFIG } from './tierConfig';
 import { AVATAR_COLORS } from './constants';
 import { isLoginBlocked, registerFailedLogin, clearLoginFailures } from './loginRateLimit';
 import { verifiedSsoEmail } from './ssoEmail';
 
 /**
- * External identity providers (SSO), configured via env vars and gated behind
- * the Pro tier. Each entry is only active when its required env vars are set,
- * so a deployment can run without any of this configured at all.
+ * External identity providers (SSO) are active only when their required
+ * environment variables are set.
  */
 const SSO_PROVIDERS = {
   oidc: {
@@ -40,7 +37,6 @@ declare module 'next-auth' {
     user: {
       id: string;
       color: string;
-      tier: string;
       role: string;
       companyName?: string | null;
       companyLogo?: string | null;
@@ -48,7 +44,6 @@ declare module 'next-auth' {
   }
   interface User {
     color?: string;
-    tier?: string;
     role?: string;
     companyName?: string | null;
     companyLogo?: string | null;
@@ -58,14 +53,12 @@ declare module 'next-auth' {
 async function buildUser(userId: string) {
   const user = await prisma.user.findUnique({ where: { id: userId } });
   if (!user) return null;
-  const tier = await getTier();
   return {
     id: user.id,
     email: user.email,
     name: user.name,
     color: user.color,
     role: user.role,
-    tier,
     companyName: user.companyName,
     companyLogo: user.companyLogo,
   };
@@ -135,10 +128,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       // Credentials sign-in is fully validated in `authorize` already.
       if (!account || account.provider === 'credentials') return true;
 
-      // External IdP sign-in (OIDC / Microsoft Entra ID) is a Pro feature.
-      const tier = await getTier();
-      if (!TIER_CONFIG[tier].sso) return '/login?error=SsoRequiresPro';
-
       const email = verifiedSsoEmail(account.provider, profile);
       if (!email) return '/login?error=SsoEmailUnverified';
 
@@ -176,31 +165,29 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         if (!fresh) return token;
         token.id = fresh.id;
         token.color = fresh.color;
-        token.tier = fresh.tier;
         token.role = fresh.role;
         token.companyName = fresh.companyName;
         token.companyLogo = fresh.companyLogo;
-        token.tierRefreshedAt = Date.now();
+        token.claimsRefreshedAt = Date.now();
         return token;
       }
 
       // Periodically refresh account details for existing sessions.
-      const TIER_TTL_MS = 5 * 60 * 1000;
-      const lastRefresh = (token.tierRefreshedAt as number | undefined) ?? 0;
-      if (Date.now() - lastRefresh > TIER_TTL_MS) {
+      const SESSION_REFRESH_MS = 5 * 60 * 1000;
+      const lastRefresh = (token.claimsRefreshedAt as number | undefined) ?? 0;
+      if (Date.now() - lastRefresh > SESSION_REFRESH_MS) {
         try {
           const fresh = await buildUser(token.id as string);
           // User no longer exists - invalidate the session instead of letting
           // the deleted account keep its (possibly admin) claims until expiry.
           if (!fresh) return null;
-          token.tier = fresh.tier;
           token.role = fresh.role;
           token.companyName = fresh.companyName;
           token.companyLogo = fresh.companyLogo;
         } catch {
           // Transient DB error - keep the existing claims and retry after the TTL.
         }
-        token.tierRefreshedAt = Date.now();
+        token.claimsRefreshedAt = Date.now();
       }
 
       return token;
@@ -209,7 +196,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       if (token) {
         session.user.id = token.id as string;
         session.user.color = token.color as string;
-        session.user.tier = token.tier as string;
         session.user.role = token.role as string;
         session.user.companyName = token.companyName as string | null;
         session.user.companyLogo = token.companyLogo as string | null;

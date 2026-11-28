@@ -3,7 +3,6 @@ import { authenticateRequest } from '@/lib/apiAuth';
 import { prisma } from '@/lib/db';
 import { loadFindings } from '@/lib/findings';
 import { getOrg } from '@/lib/organisationStore';
-import { TIER_CONFIG } from '@/lib/tierConfig';
 import { canAccessProject, assertProjectWriteAccess } from '@/lib/access';
 import { severityRank } from '@/lib/cvss';
 import { CSAF_VERSIONS, PUBLISHER_CATEGORIES, TLP_LABELS, normaliseTlp } from '@/lib/csaf';
@@ -16,7 +15,6 @@ const VALID_SEVERITIES = ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'] as const;
 export async function GET(req: NextRequest, ctx: RouteContext) {
   const authResult = await authenticateRequest(req);
   if (!authResult) return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
-  if (!TIER_CONFIG[authResult.tier].sbom) return NextResponse.json({ error: 'Pro license required.' }, { status: 403 });
 
   const { id: projectId } = await ctx.params;
   if (!await canAccessProject(projectId, authResult.userId)) {
@@ -75,7 +73,6 @@ export async function GET(req: NextRequest, ctx: RouteContext) {
 export async function PUT(req: NextRequest, ctx: RouteContext) {
   const authResult = await authenticateRequest(req);
   if (!authResult) return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
-  if (!TIER_CONFIG[authResult.tier].sbom) return NextResponse.json({ error: 'Pro license required.' }, { status: 403 });
 
   const { id: projectId } = await ctx.params;
   try {

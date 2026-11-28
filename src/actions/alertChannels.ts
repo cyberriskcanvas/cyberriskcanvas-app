@@ -3,7 +3,6 @@
 import { revalidatePath } from 'next/cache';
 import { requireAdmin } from '@/lib/auth';
 import { prisma } from '@/lib/db';
-import { requireTierFeature } from '@/lib/tierGuard';
 import { sendTestAlert, type WebhookResult } from '@/lib/alerting';
 import { audit } from '@/lib/audit';
 import { SEVERITIES } from '@/lib/cvss';
@@ -20,9 +19,8 @@ export interface AlertChannelDTO {
 const VALID_TYPES = ['slack', 'teams', 'generic'];
 const VALID_SEVERITIES: readonly string[] = SEVERITIES;
 
-async function requireProAdmin() {
+async function requireAlertAdmin() {
   const session = await requireAdmin();
-  await requireTierFeature('sbom');
   return session;
 }
 
@@ -48,13 +46,13 @@ function toDTO(c: { id: string; url: string; type: string; minSeverity: string; 
 }
 
 export async function listAlertChannels(): Promise<AlertChannelDTO[]> {
-  await requireProAdmin();
+  await requireAlertAdmin();
   const channels = await prisma.alertChannel.findMany({ orderBy: { createdAt: 'asc' } });
   return channels.map(toDTO);
 }
 
 export async function createAlertChannel(input: { url: string; type: string; minSeverity: string }): Promise<AlertChannelDTO> {
-  const session = await requireProAdmin();
+  const session = await requireAlertAdmin();
 
   const url = input.url.trim();
   if (!/^https?:\/\//i.test(url)) throw new Error('Webhook URL must start with http:// or https://');
@@ -80,7 +78,7 @@ export async function createAlertChannel(input: { url: string; type: string; min
 }
 
 export async function updateAlertChannel(id: string, input: { active?: boolean; minSeverity?: string }): Promise<AlertChannelDTO> {
-  const session = await requireProAdmin();
+  const session = await requireAlertAdmin();
 
   if (input.minSeverity && !VALID_SEVERITIES.includes(input.minSeverity)) throw new Error('Invalid severity threshold');
 
@@ -109,7 +107,7 @@ export async function updateAlertChannel(id: string, input: { active?: boolean; 
 }
 
 export async function deleteAlertChannel(id: string): Promise<void> {
-  const session = await requireProAdmin();
+  const session = await requireAlertAdmin();
   const channel = await prisma.alertChannel.delete({ where: { id } });
 
   audit({
@@ -125,7 +123,7 @@ export async function deleteAlertChannel(id: string): Promise<void> {
 }
 
 export async function testAlertChannel(id: string): Promise<WebhookResult> {
-  await requireProAdmin();
+  await requireAlertAdmin();
   const channel = await prisma.alertChannel.findUniqueOrThrow({ where: { id } });
   return sendTestAlert(channel.url, channel.type);
 }

@@ -15,8 +15,7 @@ function Chip({ tone, children }: { tone: 'ok' | 'bad' | 'warn' | 'muted'; child
   return <span className={cn('rounded-full px-2 py-0.5 text-[10px] font-semibold', style)}>{children}</span>;
 }
 
-function gateChip(row: PortfolioRow, pro: boolean, t: ReturnType<typeof usePortfolioT>['t']) {
-  if (!pro) return <Chip tone="muted">{t.gate.pro}</Chip>;
+function gateChip(row: PortfolioRow, t: ReturnType<typeof usePortfolioT>['t']) {
   const g = row.summary.gate;
   return <Chip tone={g === 'pass' ? 'ok' : g === 'fail' ? 'bad' : 'muted'}>{t.gate[g]}</Chip>;
 }
@@ -55,7 +54,7 @@ export function OrganisationStrip({ stations }: { stations: Portfolio['org'] }) 
 }
 
 /** Status block of a product card: roadmap progress and the chips that matter. */
-export function ProductStatus({ row, pro }: { row: PortfolioRow; pro: boolean }) {
+export function ProductStatus({ row }: { row: PortfolioRow }) {
   const { t } = usePortfolioT();
   const stationT = useJourneyT().stations;
   const s = row.summary;
@@ -70,8 +69,8 @@ export function ProductStatus({ row, pro }: { row: PortfolioRow; pro: boolean })
         <div className="h-1.5 overflow-hidden rounded-full bg-[#f0ede6]"><div className="h-full rounded-full bg-[#1e293b]" style={{ width: `${pct}%` }} /></div>
       </div>
       <div className="flex flex-wrap gap-1.5">
-        {gateChip(row, pro, t)}
-        {pro && s.openHigh !== null && s.openHigh > 0 && <Chip tone="bad">{t.high(s.openHigh)}</Chip>}
+        {gateChip(row, t)}
+        {s.openHigh !== null && s.openHigh > 0 && <Chip tone="bad">{t.high(s.openHigh)}</Chip>}
         {(s.art14.open > 0 || s.art14.overdue > 0) && <Chip tone={s.art14.overdue > 0 ? 'bad' : 'warn'}>{t.art14(s.art14.open, s.art14.overdue)}</Chip>}
         {s.supportDays !== null && <Chip tone={s.supportDays < 0 ? 'bad' : s.supportDays < 180 ? 'warn' : 'muted'}>{t.support(s.supportDays)}</Chip>}
         {s.assessment !== 'none' && <Chip tone={s.assessment === 'approved' ? 'ok' : s.assessment === 'rejected' ? 'bad' : 'muted'}>{t.assessment[s.assessment]}</Chip>}
@@ -80,7 +79,7 @@ export function ProductStatus({ row, pro }: { row: PortfolioRow; pro: boolean })
   );
 }
 
-export function ProductTable({ rows, pro, onOpen }: { rows: PortfolioRow[]; pro: boolean; onOpen: (row: PortfolioRow) => void }) {
+export function ProductTable({ rows, onOpen }: { rows: PortfolioRow[]; onOpen: (row: PortfolioRow) => void }) {
   const { t } = usePortfolioT();
   const stationT = useJourneyT().stations;
   const c = t.cols;
@@ -105,8 +104,8 @@ export function ProductTable({ rows, pro, onOpen }: { rows: PortfolioRow[]; pro:
                   </div>
                   <p className="mt-0.5 truncate text-[11px] text-[#9b9590]">{s.currentStation ? stationT[s.currentStation].title : t.allDone}</p>
                 </td>
-                <td className="px-3 py-2.5">{gateChip(r, pro, t)}</td>
-                <td className="px-3 py-2.5 text-xs">{pro ? (s.openHigh === null ? t.none : <span className={s.openHigh > 0 ? 'font-semibold text-red-700' : 'text-[#6b6460]'}>{s.openHigh}</span>) : <Chip tone="muted">{t.pro}</Chip>}</td>
+                <td className="px-3 py-2.5">{gateChip(r, t)}</td>
+                <td className="px-3 py-2.5 text-xs">{s.openHigh === null ? t.none : <span className={s.openHigh > 0 ? 'font-semibold text-red-700' : 'text-[#6b6460]'}>{s.openHigh}</span>}</td>
                 <td className="px-3 py-2.5 text-xs">{s.art14.open + s.art14.overdue === 0 ? t.none : <Chip tone={s.art14.overdue > 0 ? 'bad' : 'warn'}>{t.art14(s.art14.open, s.art14.overdue)}</Chip>}</td>
                 <td className="px-3 py-2.5 text-xs text-[#6b6460]">{s.supportDays === null ? t.none : t.support(s.supportDays)}</td>
                 <td className="px-3 py-2.5 text-xs text-[#6b6460]">{t.assessment[s.assessment] || t.none}</td>

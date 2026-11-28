@@ -1,7 +1,6 @@
 import { useLanguageStore } from '@/store/languageStore';
 
 const en = {
-  trial: { label: 'Trial License', body: 'This installation runs in trial mode. Pro features are locked once the trial licence expires.' },
   banner: {
     frozen: (n: number, label: string | null) => `Version ${n}${label ? ` - ${label}` : ''} is frozen`,
     by: (name: string) => ` · approved by ${name}`,
@@ -34,7 +33,6 @@ const en = {
 };
 
 const de: typeof en = {
-  trial: { label: 'Trial License', body: 'Diese Installation läuft im Testbetrieb. Nach Ablauf der Testlizenz werden Pro-Funktionen gesperrt.' },
   banner: {
     frozen: (n, label) => `Version ${n}${label ? ` - ${label}` : ''} ist eingefroren`,
     by: (name) => ` · freigegeben von ${name}`,

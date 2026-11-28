@@ -1,7 +1,6 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { authenticateRequest } from '@/lib/apiAuth';
 import { prisma } from '@/lib/db';
-import { TIER_CONFIG } from '@/lib/tierConfig';
 import { assertProjectWriteAccess } from '@/lib/access';
 import { detectFormat, normaliseComponents, type Bom } from '@/lib/sbomParse';
 import { ingestSbom, MAX_COMPONENTS } from '@/lib/sbomIngest';
@@ -14,9 +13,6 @@ export async function POST(req: NextRequest, ctx: RouteContext) {
   const authResult = await authenticateRequest(req);
   if (!authResult) {
     return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
-  }
-  if (!TIER_CONFIG[authResult.tier].sbom) {
-    return NextResponse.json({ error: 'This feature requires a valid Pro license.' }, { status: 403 });
   }
 
   const { id: projectId } = await ctx.params;

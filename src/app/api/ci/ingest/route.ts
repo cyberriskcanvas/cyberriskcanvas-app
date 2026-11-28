@@ -1,8 +1,6 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { authenticateCiToken } from '@/lib/apiAuth';
 import { prisma } from '@/lib/db';
-import { getTier } from '@/lib/tierLimits';
-import { TIER_CONFIG } from '@/lib/tierConfig';
 import { evaluateCiFile, InvalidCiFile } from '@/lib/ciEval';
 import { MAX_CI_FILE_SIZE, saveCiFile } from '@/lib/ciStorage';
 import { resolveCiVersion } from '@/lib/ciVersion';
@@ -27,9 +25,6 @@ const PART_RE = /^[A-Za-z0-9._-]{0,64}$/;
 export async function POST(req: NextRequest) {
   const ci = await authenticateCiToken(req);
   if (!ci) return NextResponse.json({ error: 'Invalid or missing CI token' }, { status: 401 });
-  if (!TIER_CONFIG[await getTier()].api) {
-    return NextResponse.json({ error: 'This feature requires a valid Pro license.' }, { status: 403 });
-  }
 
   const q = new URL(req.url).searchParams;
   const source = q.get('source') ?? '';

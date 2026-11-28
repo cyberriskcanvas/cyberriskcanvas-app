@@ -35,7 +35,7 @@ const en = {
   team: { title: 'Team memberships', none: 'You are not assigned to a team at the moment.', product: 'Product team', review: 'Review team', lead: 'Lead', member: 'Member', adminNote: 'As an administrator you can manage teams and members in the admin portal.', adminOpen: 'Open admin portal' },
   api: {
     intro: 'Create API keys for programmatic access to your projects.', auth: 'Authenticate requests with ', share: 'A key grants access to the same projects as your account. Do not share keys.',
-    pro: 'API keys are a Pro feature. Upgrade to create keys.', fresh: 'New key - only visible now!', hide: 'Hide', show: 'Show', copy: 'Copy', copied: 'Copied!',
+    fresh: 'New key - only visible now!', hide: 'Hide', show: 'Show', copy: 'Copy', copied: 'Copied!',
     saveNow: 'Save the key now - it will never be shown again.', namePh: 'Key name, e.g. "CI Pipeline"', create: 'Create', none: 'No API keys created yet.',
     created: (d: string) => `Created ${d}`, lastUsed: (d: string) => ` · Last used ${d}`, revoke: 'Revoke', endpoints: 'Available endpoints', docs: 'Full API docs',
     ep: { sbom: 'Upload SBOM', vulns: 'List vulnerabilities', status: 'Set status', csaf: 'Export VEX / CSAF' },
@@ -79,7 +79,7 @@ const de: typeof en = {
   team: { title: 'Team-Mitgliedschaften', none: 'Du bist aktuell keinem Team zugewiesen.', product: 'Produktteam', review: 'Review-Team', lead: 'Lead', member: 'Mitglied', adminNote: 'Als Administrator kannst du Teams und Mitglieder im Admin-Portal verwalten.', adminOpen: 'Admin-Portal öffnen' },
   api: {
     intro: 'Erstelle API-Keys für programmatischen Zugriff auf deine Projekte.', auth: 'Authentifiziere Anfragen mit ', share: 'Ein Key gewährt Zugriff auf dieselben Projekte wie dein Account. Gib Keys nicht weiter.',
-    pro: 'API-Keys sind ein Pro-Feature. Upgrade dein Konto, um Keys zu erstellen.', fresh: 'Neuer Key - nur jetzt sichtbar!', hide: 'Verbergen', show: 'Anzeigen', copy: 'Kopieren', copied: 'Kopiert!',
+    fresh: 'Neuer Key - nur jetzt sichtbar!', hide: 'Verbergen', show: 'Anzeigen', copy: 'Kopieren', copied: 'Kopiert!',
     saveNow: 'Speichere den Key jetzt - er wird nie wieder angezeigt.', namePh: 'Key-Name, z.B. "CI Pipeline"', create: 'Erstellen', none: 'Noch keine API-Keys erstellt.',
     created: (d) => `Erstellt ${d}`, lastUsed: (d) => ` · Zuletzt verwendet ${d}`, revoke: 'Widerrufen', endpoints: 'Verfügbare Endpunkte', docs: 'Vollständige API-Docs',
     ep: { sbom: 'SBOM hochladen', vulns: 'Schwachstellen abrufen', status: 'Status setzen', csaf: 'VEX / CSAF exportieren' },

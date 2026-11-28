@@ -4,8 +4,6 @@ import { requireSession } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { assertProjectAccess, assertProjectWriteAccess } from '@/lib/access';
 import { audit } from '@/lib/audit';
-import { checkTierFeature } from '@/lib/tierGuard';
-import { isTierBlock } from '@/lib/tierBlock';
 import { freezeActiveVersion } from '@/lib/freeze';
 import { revalidatePath } from 'next/cache';
 
@@ -44,9 +42,6 @@ export async function getProjectVersions(projectId: string) {
  * freezeVersion) and returns the first diagram ID for navigation.
  */
 export async function branchProject(projectId: string, label: string) {
-  const access = await checkTierFeature('baselines');
-  if (isTierBlock(access)) return access;
-
   const session = await requireSession();
   await assertProjectWriteAccess(projectId, session.user.id);
 
@@ -85,9 +80,6 @@ export async function branchProject(projectId: string, label: string) {
  * - A new active ProjectVersion is inserted.
  */
 export async function freezeVersion(projectId: string, label: string) {
-  const access = await checkTierFeature('baselines');
-  if (isTierBlock(access)) return access;
-
   const session = await requireSession();
   await assertProjectWriteAccess(projectId, session.user.id);
   const frozenByName = session.user.name ?? session.user.email ?? 'Unbekannt';

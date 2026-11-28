@@ -11,22 +11,19 @@ import { TemplateModal } from '@/components/Templates/TemplateModal';
 import { VersionPanel } from '@/components/Versioning/VersionPanel';
 import { ModelCheckPanel } from '@/components/ModelCheck/ModelCheckPanel';
 import { DocumentsView } from '@/components/Documents/DocumentsView';
-import { AIAnalysisModal, Art14Banner, AttackPathPanel, CsafWizardView, OperationsView } from '@/pro/ui';
+import { AIAnalysisModal, Art14Banner, AttackPathPanel, CsafWizardView, OperationsView } from '@/features/ui';
 import { ProjectNotesPanel } from '@/components/Canvas/ProjectNotesPanel';
 import { JourneyView } from '@/components/Tasks/JourneyView';
 import { useJourneyT } from '@/i18n/journey';
 import { NextStepBar } from './NextStepBar';
 import { useJourneyStore } from '@/store/journeyStore';
-import { useTierGuard } from '@/hooks/useTierGuard';
-import { PaywallModal } from '@/components/Paywall/PaywallModal';
 import { BaselineBanner } from '@/components/Baseline/BaselineBanner';
 import { FreezeModal } from '@/components/Baseline/FreezeModal';
 import { useDiagramStore } from '@/store/diagramStore';
-import { useSubscriptionStore } from '@/store/subscriptionStore';
 import { useProjectStore } from '@/store/projectStore';
 import type { DiagramNode, DiagramEdge } from '@/types';
 import type { AttackPath } from '@/utils/attackPaths';
-import { Lock, PenLine, ShieldAlert, FileCheck2, FileText, ListChecks } from 'lucide-react';
+import { PenLine, ShieldAlert, FileCheck2, FileText, ListChecks } from 'lucide-react';
 
 import { useT } from '@/hooks/useT';
 import { OnboardingTour, resetOnboardingTour } from '@/components/Onboarding/OnboardingTour';
@@ -56,7 +53,6 @@ interface Props {
     id: string;
     name: string;
     color: string;
-    tier: string;
     companyLogo?: string;
     companyName?: string;
   };
@@ -83,15 +79,12 @@ export default function DiagramEditorClient({ diagram, user, activeVersion, iec6
   const [currentVersionId, setCurrentVersionId] = useState<string | null>(activeVersion?.id ?? null);
 
   const { setNodes, setEdges, setViewport, setDiagramId } = useDiagramStore();
-  const { setTier } = useSubscriptionStore();
   const { setProject, setVersionFrozen } = useProjectStore();
   // Roadmap data for the roadmap tab and the next-step bar, refreshed on every tab change
   const loadJourney = useJourneyStore((s) => s.load);
   useEffect(() => { loadJourney(diagram.projectId); }, [loadJourney, diagram.projectId, activeTab]);
   const [csafStep, setCsafStep] = useState<'gate' | 'reporting'>('gate');
   const openTab = (tab: ProjectTab, step?: 'reporting') => {
-    if (tab === 'documents' && !docsGuard.allowed) { docsGuard.showPaywall(); return; }
-    if ((tab === 'operations' || tab === 'csaf') && !sbomGuard.allowed) { sbomGuard.showPaywall(); return; }
     if (tab === 'csaf') setCsafStep(step ?? 'gate');
     setActiveTab(tab);
   };
@@ -103,10 +96,6 @@ export default function DiagramEditorClient({ diagram, user, activeVersion, iec6
     setViewport(diagram.viewport);
   }, [diagram.id]);
 
-  useEffect(() => {
-    setTier((user.tier as 'free' | 'pro') ?? 'free');
-  }, [user.tier]);
-
   // The IEC option only comes from the server when a project is opened: a freeze or a new version must not undo a change made in the product data
   useEffect(() => {
     setProject({ projectId: diagram.projectId, activeVersion: activeVersion ?? null, iec62443 });
@@ -116,9 +105,6 @@ export default function DiagramEditorClient({ diagram, user, activeVersion, iec6
     setProject({ projectId: diagram.projectId, activeVersion: activeVersion ?? null });
     setCurrentVersionId(activeVersion?.id ?? null);
   }, [diagram.projectId, activeVersion?.id]);
-
-  const docsGuard = useTierGuard('documents');
-  const sbomGuard = useTierGuard('sbom');
 
   const handleCloseAttackPaths = () => {
     setShowAttackPaths(false);
@@ -146,13 +132,6 @@ export default function DiagramEditorClient({ diagram, user, activeVersion, iec6
           onFreezeBaseline={() => setShowFreezeModal(true)}
           onBranchProject={() => {/* replaced by version freeze */}}
         />
-        {(docsGuard.paywallVisible || sbomGuard.paywallVisible) && (
-          <PaywallModal
-            currentTier={docsGuard.paywallVisible ? docsGuard.tier : sbomGuard.tier}
-            requiredTier="pro"
-            onClose={docsGuard.paywallVisible ? docsGuard.hidePaywall : sbomGuard.hidePaywall}
-          />
-        )}
 
         {/* ── Project-level tab bar ─────────────────────────────────────────── */}
         <div className="flex shrink-0 items-center gap-1 border-b border-[#e5e1d8] bg-white px-4">
@@ -191,7 +170,6 @@ export default function DiagramEditorClient({ diagram, user, activeVersion, iec6
           >
             <ShieldAlert className="h-3.5 w-3.5" />
             {journeyT.tabs.operations}
-            {!sbomGuard.allowed && <Lock className="h-3 w-3 text-[#c0bab4]" />}
           </button>
           <button
             onClick={() => openTab('documents')}
@@ -204,7 +182,6 @@ export default function DiagramEditorClient({ diagram, user, activeVersion, iec6
           >
             <FileText className="h-3.5 w-3.5" />
             {journeyT.tabs.documents}
-            {!docsGuard.allowed && <Lock className="h-3 w-3 text-[#c0bab4]" />}
           </button>
           <button
             onClick={() => openTab('csaf')}
@@ -217,7 +194,6 @@ export default function DiagramEditorClient({ diagram, user, activeVersion, iec6
           >
             <FileCheck2 className="h-3.5 w-3.5" />
             {journeyT.tabs.csaf}
-            {!sbomGuard.allowed && <Lock className="h-3 w-3 text-[#c0bab4]" />}
           </button>
         </div>
 
@@ -287,21 +263,21 @@ export default function DiagramEditorClient({ diagram, user, activeVersion, iec6
         )}
 
         {/* ── Operations & Vulnerabilities tab content ──────────────────────── */}
-        {activeTab === 'operations' && sbomGuard.allowed && currentVersionId && (
+        {activeTab === 'operations' && currentVersionId && (
           <div className="flex flex-1 overflow-hidden">
             <OperationsView projectId={diagram.projectId} versionId={currentVersionId} />
           </div>
         )}
 
         {/* ── Documents tab content ─────────────────────────────────────────── */}
-        {activeTab === 'documents' && docsGuard.allowed && (
+        {activeTab === 'documents' && (
           <div className="flex flex-1 overflow-hidden">
             <DocumentsView projectId={diagram.projectId} />
           </div>
         )}
 
         {/* ── Advisories & reporting tab content ─────────────────────────────────────── */}
-        {activeTab === 'csaf' && sbomGuard.allowed && (
+        {activeTab === 'csaf' && (
           <div className="flex flex-1 overflow-hidden">
             <CsafWizardView
               key={csafStep}

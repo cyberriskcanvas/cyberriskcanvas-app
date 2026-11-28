@@ -2,11 +2,9 @@
 
 import { requireSession } from '@/lib/auth';
 import { prisma } from '@/lib/db';
-import { getTier } from '@/lib/tierLimits';
-import { TIER_CONFIG } from '@/lib/tierConfig';
 import { getOrg } from '@/lib/organisationStore';
 import { loadJourneyData } from '@/lib/journeyData';
-import { productGate } from '@/pro/server';
+import { productGate } from '@/features/server';
 import { sanitizeDismissed } from '@/lib/modelCheckDismissed';
 import { sanitizeCraChecklist } from '@/lib/craChecklist';
 import { sanitizeReadiness } from '@/lib/readiness';
@@ -36,8 +34,6 @@ export interface PortfolioRow {
 export interface Portfolio {
   org: OrgStation[];
   rows: PortfolioRow[];
-  /** Gate and findings need the Pro licence. */
-  pro: boolean;
 }
 
 const SDL_IDS: ReadonlySet<string> = new Set(TR03185_REQUIREMENTS.map((r) => r.id));
@@ -47,7 +43,6 @@ const ORG_QUESTION_IDS = READINESS_QUESTIONS.filter((q) => q.scope === 'org').ma
 export async function getPortfolio(): Promise<Portfolio> {
   const session = await requireSession();
   const ids = await visibleProjectIds(session.user.id);
-  const pro = !!TIER_CONFIG[await getTier()].sbom;
 
   const [projects, org, orgReadiness] = await Promise.all([
     prisma.project.findMany({
@@ -77,7 +72,7 @@ export async function getPortfolio(): Promise<Portfolio> {
     const nodes = (diagram?.nodes ?? []) as unknown as DiagramNode[];
     const edges = (diagram?.edges ?? []) as unknown as DiagramEdge[];
 
-    const gate = pro && active ? await productGate(active.id, p.gateFailOn) : null;
+    const gate = active ? await productGate(active.id, p.gateFailOn) : null;
     const ciLatest = gate?.ciLatest ?? null;
     const gateReasons = gate?.gateReasons ?? null;
     const gatePass = gate?.gatePass ?? null;
@@ -105,5 +100,5 @@ export async function getPortfolio(): Promise<Portfolio> {
     };
   }));
 
-  return { org: orgStations, rows, pro };
+  return { org: orgStations, rows };
 }

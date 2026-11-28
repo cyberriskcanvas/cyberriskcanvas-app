@@ -1,7 +1,5 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { authenticateCiToken } from '@/lib/apiAuth';
-import { getTier } from '@/lib/tierLimits';
-import { TIER_CONFIG } from '@/lib/tierConfig';
 import { computeGate, parseGateParams } from '@/lib/ciGateRun';
 import { resolveCiVersion } from '@/lib/ciVersion';
 import { gateJunit } from '@/lib/ciGate';
@@ -14,9 +12,6 @@ import { gateJunit } from '@/lib/ciGate';
 export async function GET(req: NextRequest) {
   const ci = await authenticateCiToken(req);
   if (!ci) return NextResponse.json({ error: 'Invalid or missing CI token' }, { status: 401 });
-  if (!TIER_CONFIG[await getTier()].api) {
-    return NextResponse.json({ error: 'This feature requires a valid Pro license.' }, { status: 403 });
-  }
 
   const q = new URL(req.url).searchParams;
   const params = parseGateParams(q);

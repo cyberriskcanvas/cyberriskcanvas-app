@@ -1,7 +1,6 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { authenticateRequest } from '@/lib/apiAuth';
 import { prisma } from '@/lib/db';
-import { TIER_CONFIG } from '@/lib/tierConfig';
 import { canAccessProject } from '@/lib/access';
 
 interface RouteContext { params: Promise<{ id: string }> }
@@ -9,7 +8,6 @@ interface RouteContext { params: Promise<{ id: string }> }
 export async function GET(req: NextRequest, ctx: RouteContext) {
   const authResult = await authenticateRequest(req);
   if (!authResult) return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
-  if (!TIER_CONFIG[authResult.tier].sbom) return NextResponse.json({ error: 'Pro license required.' }, { status: 403 });
 
   const { id: projectId } = await ctx.params;
   if (!await canAccessProject(projectId, authResult.userId)) {

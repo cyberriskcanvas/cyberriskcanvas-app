@@ -2,13 +2,9 @@ import { createHash } from 'crypto';
 import { type NextRequest } from 'next/server';
 import { auth } from './auth';
 import { prisma } from './db';
-import { getTier } from './tierLimits';
-
-// getTier() has a 1-day in-process cache - safe to call on every request.
 
 export interface AuthResult {
   userId: string;
-  tier: 'free' | 'pro';
   /** true when authenticated via API key (not session) */
   viaApiKey: boolean;
 }
@@ -21,12 +17,8 @@ export async function authenticateRequest(req: NextRequest): Promise<AuthResult 
   // 1. Try session first (browser-based requests)
   const session = await auth();
   if (session?.user?.id) {
-    // Always fetch the live tier - getTier() uses a 1-day in-process cache
-    // so this is fast but never stale after a license key change.
-    const tier = await getTier();
     return {
       userId: session.user.id,
-      tier,
       viaApiKey: false,
     };
   }
@@ -52,8 +44,7 @@ export async function authenticateRequest(req: NextRequest): Promise<AuthResult 
     data: { lastUsedAt: new Date() },
   }).catch(() => { /* non-critical - ignore failures */ });
 
-  const tier = await getTier();
-  return { userId: apiKey.userId, tier, viaApiKey: true };
+  return { userId: apiKey.userId, viaApiKey: true };
 }
 
 /**

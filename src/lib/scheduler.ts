@@ -1,5 +1,3 @@
-import { getTier } from './tierLimits';
-import { TIER_CONFIG } from './tierConfig';
 import { runCveScan } from './cveScan';
 import { runReminders } from './reminders';
 
@@ -29,7 +27,6 @@ export function startBackgroundJobs() {
   const scanHours = hours('CVE_SCAN_INTERVAL_HOURS', 24);
   if (scanHours > 0) {
     const scan = () => guarded('cve-scan', async () => {
-      if (!TIER_CONFIG[await getTier()].sbom) return; // needs the Pro licence, like the manual scan
       const r = await runCveScan();
       if (r.status === 'completed') console.warn(`[scheduler] CVE scan done: ${r.scannedCount} components, ${r.newCount} new findings`);
     });

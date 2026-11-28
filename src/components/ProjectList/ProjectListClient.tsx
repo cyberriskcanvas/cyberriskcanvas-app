@@ -12,7 +12,6 @@ import {
 } from 'lucide-react';
 import { signOut, useSession } from 'next-auth/react';
 import { createProject, deleteProject } from '@/actions/projects';
-import { usePaywallStore } from '@/store/paywallStore';
 import { SetupWizard } from '@/components/Wizard/SetupWizard';
 import { generateDiagram } from '@/components/Wizard/generateDiagram';
 import { addGuidedDraft, addGuidedFacts } from '@/components/Wizard/guidedDraft';
@@ -20,7 +19,6 @@ import type { WizardAnswers } from '@/components/Wizard/generateDiagram';
 import type { Project } from '@/types';
 import { cn } from '@/utils/cn';
 import { formatDate } from '@/utils/format';
-import { PRO_EDITION } from '@/pro/ui';
 
 type ProjectWithMeta = Project & {
   _count?: { diagrams: number };
@@ -30,13 +28,11 @@ type ProjectWithMeta = Project & {
 function ProjectCard({
   project,
   status,
-  pro,
   onOpen,
   onDelete,
 }: {
   project: ProjectWithMeta;
   status?: PortfolioRow;
-  pro: boolean;
   onOpen: () => void;
   onDelete: (e: React.MouseEvent) => void;
 }) {
@@ -95,7 +91,7 @@ function ProjectCard({
         </div>
       </div>
 
-      {status && <ProductStatus row={status} pro={pro} />}
+      {status && <ProductStatus row={status} />}
 
       {/* Version timeline strip */}
       {frozenCount > 0 && (
@@ -142,8 +138,6 @@ export default function ProjectListClient({ initialProjects, canViewSecurity }: 
   const { t: ptf } = usePortfolioT();
   const [portfolio, setPortfolio] = useState<Portfolio | null>(null);
   const [view, setView] = useState<'cards' | 'table'>('cards');
-  const showPaywall = usePaywallStore((s) => s.showPaywall);
-  void showPaywall;
   const userMenuRef = useRef<HTMLDivElement>(null);
 
   // The list renders at once; the status of every product fills in when the portfolio has loaded
@@ -240,7 +234,7 @@ export default function ProjectListClient({ initialProjects, canViewSecurity }: 
             <button onClick={() => router.push('/organisation')} className={navBtnClass}>
               <Building2 size={15} /> <span className="hidden md:inline">{ptf.orgTitle}</span>
             </button>
-            {canViewSecurity && PRO_EDITION && (
+            {canViewSecurity && (
               <button onClick={() => router.push('/security')} className={navBtnClass}>
                 <ShieldAlert size={15} /> <span className="hidden md:inline">Security Overview</span>
               </button>
@@ -330,7 +324,6 @@ export default function ProjectListClient({ initialProjects, canViewSecurity }: 
             {view === 'table' && portfolio ? (
               <ProductTable
                 rows={portfolio.rows.filter((r) => projects.some((p) => p.id === r.projectId))}
-                pro={portfolio.pro}
                 onOpen={(r) => router.push(`/diagram/${r.diagramId ?? ''}`)}
               />
             ) : (
@@ -340,7 +333,6 @@ export default function ProjectListClient({ initialProjects, canViewSecurity }: 
                     key={project.id}
                     project={project}
                     status={portfolio?.rows.find((r) => r.projectId === project.id)}
-                    pro={portfolio?.pro ?? false}
                     onOpen={() => openProject(project)}
                     onDelete={(e) => handleDelete(project.id, e)}
                   />

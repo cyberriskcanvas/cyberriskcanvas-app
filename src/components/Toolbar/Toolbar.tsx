@@ -5,10 +5,6 @@ import {
   Lock, GitBranch, ChevronDown, User, ArrowLeft, Settings, StickyNote, ListChecks } from 'lucide-react';
 import { useModelCheckT } from '@/i18n/modelCheck';
 import { signOut } from 'next-auth/react';
-import { SubscriptionBadge } from '@/components/Subscription/SubscriptionBadge';
-import { AICreditCounter } from '@/components/Subscription/AICreditCounter';
-import { useTierGuard } from '@/hooks/useTierGuard';
-import { PaywallModal } from '@/components/Paywall/PaywallModal';
 import { calculateCompliance, getRequirementsForSL, type SLLevel, type IECPart } from '@/data/iec62443';
 import type { IEC62443Mapping, NodeData } from '@/types';
 import { cn } from '@/utils/cn';
@@ -36,7 +32,7 @@ interface ToolbarProps {
   attackPathsOpen: boolean;
   modelCheckOpen: boolean;
   notesOpen: boolean;
-  user?: { id: string; name: string; color: string; tier: string; companyLogo?: string; companyName?: string };
+  user?: { id: string; name: string; color: string; companyLogo?: string; companyName?: string };
   onFreezeBaseline?: () => void;
   onBranchProject?: () => void;
 }
@@ -222,8 +218,6 @@ export function Toolbar({
     return calculateCompliance(allMappings, allReqs).score;
   }, [nodes]);
 
-  const aiGuard = useTierGuard('ai');
-  const attackGuard = useTierGuard('attackPaths');
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const canvasJsonInputRef = useRef<HTMLInputElement>(null);
@@ -274,8 +268,8 @@ export function Toolbar({
   const canvasJsonItem = <DropdownItem onClick={() => { canvasJsonInputRef.current?.click(); closeMenus(); }} icon={<Upload size={14} />} label={t.toolbar.importCanvasJson} />;
   const versionsItem = <DropdownItem onClick={() => { onOpenVersions(); closeMenus(); }} icon={<History size={14} />} label={t.toolbar.versionHistory} active={versionsOpen} />;
   const clearItem = <DropdownItem onClick={() => { handleClearCanvas(); closeMenus(); }} icon={<Trash2 size={14} />} label={t.toolbar.clearCanvas} danger />;
-  const aiItem = <DropdownItem onClick={() => { if (aiGuard.allowed) onOpenAI(); else aiGuard.showPaywall(); closeMenus(); }} icon={<Brain size={14} />} label={t.toolbar.aiAnalysisLabel} indigo />;
-  const attackItem = <DropdownItem onClick={() => { if (attackGuard.allowed) onOpenAttackPaths(); else attackGuard.showPaywall(); closeMenus(); }} icon={<Route size={14} />} label={t.toolbar.attackPaths} active={attackPathsOpen} />;
+  const aiItem = <DropdownItem onClick={() => { onOpenAI(); closeMenus(); }} icon={<Brain size={14} />} label={t.toolbar.aiAnalysisLabel} indigo />;
+  const attackItem = <DropdownItem onClick={() => { onOpenAttackPaths(); closeMenus(); }} icon={<Route size={14} />} label={t.toolbar.attackPaths} active={attackPathsOpen} />;
 
   return (
     <header className="relative flex h-12 shrink-0 items-center justify-between border-b border-gray-800 bg-gray-900 px-3 gap-2">
@@ -371,21 +365,6 @@ export function Toolbar({
               )}
             </div>
 
-            {aiGuard.paywallVisible && (
-              <PaywallModal
-                currentTier={aiGuard.tier}
-                requiredTier={aiGuard.requiredTier}
-                onClose={aiGuard.hidePaywall}
-              />
-            )}
-            {attackGuard.paywallVisible && (
-              <PaywallModal
-                currentTier={attackGuard.tier}
-                requiredTier={attackGuard.requiredTier}
-                onClose={attackGuard.hidePaywall}
-              />
-            )}
-
             <ToolbarDivider />
           </>
         )}
@@ -439,8 +418,6 @@ export function Toolbar({
 
       {/* Right side: badges + collaborators + account */}
       <div className="flex items-center gap-2 shrink-0">
-        <SubscriptionBadge />
-        <AICreditCounter />
 
         {iec62443 && complianceScore !== null && (
           <div
@@ -497,7 +474,7 @@ export function Toolbar({
                 {user && (
                   <div className="px-3 py-2 mb-0.5">
                     <p className="text-xs font-semibold text-[#1a1714] truncate">{user.name}</p>
-                    <p className="text-[11px] text-[#9b9590] truncate">{user.tier === 'pro' ? 'Pro' : 'Free'}</p>
+                    <p className="text-[11px] text-[#9b9590] truncate">CyberRisk Canvas</p>
                   </div>
                 )}
                 <DropdownSeparator />

@@ -54,7 +54,7 @@ export interface JourneyData {
 
 export interface JourneyInput {
   nodes: DiagramNode[];
-  /** Newest CI run per source/part; null when CI is not available (licence/access). */
+  /** Newest CI run per source/part; null when CI is not available (access). */
   ciLatest: Array<{ source: string; result: string }> | null;
   /** Release gate reasons; null when unknown. */
   gateReasons: Array<{ code: string }> | null;

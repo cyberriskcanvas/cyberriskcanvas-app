@@ -3,8 +3,6 @@
 import { requireSession } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { assertDiagramAccess, assertDiagramWriteAccess } from '@/lib/access';
-import { checkTierFeature } from '@/lib/tierGuard';
-import { isTierBlock } from '@/lib/tierBlock';
 import { MANUAL_VERSION_LIMIT, selectVersionsToPrune } from '@/lib/versionRetention';
 
 const listSelect = {
@@ -35,9 +33,6 @@ export async function createVersion(
   viewport: unknown,
   message?: string,
 ) {
-  const access = await checkTierFeature('versions');
-  if (isTierBlock(access)) return access;
-
   const session = await requireSession();
   await assertDiagramWriteAccess(diagramId, session.user.id);
 

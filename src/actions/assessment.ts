@@ -4,7 +4,6 @@ import { requireSession } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { audit } from '@/lib/audit';
 import { assertProjectWriteAccess, canAccessProject, isReviewerOrAdmin } from '@/lib/access';
-import { requireTierFeature } from '@/lib/tierGuard';
 import { sanitizeCraChecklist, type CraChecklist } from '@/lib/craChecklist';
 import { mergeChecklist } from '@/lib/organisation';
 import { getOrg } from '@/lib/organisationStore';
@@ -51,8 +50,8 @@ export async function getAssessmentOverview(projectId: string): Promise<Assessme
 }
 
 export async function startAssessment(projectId: string, versionId: string): Promise<string> {
-  const { userId } = await requireTierFeature('approvalWorkflow');
   const session = await requireSession();
+  const userId = session.user.id;
   const { assessor, admin } = await roleOf(userId);
   if (!assessor) throw new Error('Only members of a review team or administrators can start an assessment');
   await assertCanRead(projectId, userId, admin);
@@ -142,7 +141,6 @@ export async function respondToFinding(assessmentId: string, requirementId: stri
 }
 
 export async function decideAssessment(assessmentId: string, decision: 'approved' | 'rejected', summary: string): Promise<AssessmentDetail> {
-  await requireTierFeature('approvalWorkflow');
   const { session, a } = await loadForAssessor(assessmentId);
   if (decision !== 'approved' && decision !== 'rejected') throw new Error('Invalid decision');
   if (decision === 'approved') {

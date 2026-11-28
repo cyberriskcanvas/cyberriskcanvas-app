@@ -8,13 +8,13 @@ const en = {
   cards: 'Cards', table: 'Table',
   roadmap: (done: number, total: number) => `Roadmap ${done}/${total}`,
   allDone: 'Roadmap complete',
-  gate: { pass: 'Gate passed', fail: 'Gate failed', unknown: 'No gate result yet', pro: 'Gate: Pro' },
+  gate: { pass: 'Gate passed', fail: 'Gate failed', unknown: 'No gate result yet' },
   high: (n: number) => `${n} high+ open`,
   art14: (open: number, overdue: number) => (overdue > 0 ? `Art. 14: ${overdue} overdue` : `Art. 14: ${open} open`),
   support: (days: number) => (days >= 0 ? `Support ${days} days` : `Support ended ${-days} days ago`),
   assessment: { none: '', open: 'Assessment open', approved: 'Approved', rejected: 'Rejected' } as Record<string, string>,
   cols: { product: 'Product', cls: 'Class', version: 'Version / release', roadmap: 'Roadmap', gate: 'Release gate', high: 'High+ findings', art14: 'Art. 14', support: 'Support', assessment: 'Assessment' },
-  none: '-', pro: 'Pro',
+  none: '-',
 };
 
 const de: typeof en = {
@@ -25,13 +25,13 @@ const de: typeof en = {
   cards: 'Karten', table: 'Tabelle',
   roadmap: (done, total) => `Fahrplan ${done}/${total}`,
   allDone: 'Fahrplan abgeschlossen',
-  gate: { pass: 'Gate bestanden', fail: 'Gate nicht bestanden', unknown: 'Noch kein Gate-Ergebnis', pro: 'Gate: Pro' },
+  gate: { pass: 'Gate bestanden', fail: 'Gate nicht bestanden', unknown: 'Noch kein Gate-Ergebnis' },
   high: (n) => `${n} High+ offen`,
   art14: (open, overdue) => (overdue > 0 ? `Art. 14: ${overdue} überfällig` : `Art. 14: ${open} offen`),
   support: (days) => (days >= 0 ? `Support ${days} Tage` : `Support seit ${-days} Tagen beendet`),
   assessment: { none: '', open: 'Assessment offen', approved: 'Freigegeben', rejected: 'Abgelehnt' },
   cols: { product: 'Produkt', cls: 'Klasse', version: 'Version / Release', roadmap: 'Fahrplan', gate: 'Release-Gate', high: 'High+-Funde', art14: 'Art. 14', support: 'Support', assessment: 'Assessment' },
-  none: '-', pro: 'Pro',
+  none: '-',
 };
 
 export function usePortfolioT() {

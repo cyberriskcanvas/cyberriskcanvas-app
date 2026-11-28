@@ -3,8 +3,6 @@
 import { useState } from 'react';
 import { Lock, X } from 'lucide-react';
 import { freezeVersion } from '@/actions/baselines';
-import { isTierBlock } from '@/lib/tierBlock';
-import { usePaywallStore } from '@/store/paywallStore';
 import { useChromeT } from '@/i18n/chrome';
 
 interface Props {
@@ -17,7 +15,6 @@ export function FreezeModal({ projectId, onSuccess, onClose }: Props) {
   const [label, setLabel] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const showPaywall = usePaywallStore((s) => s.showPaywall);
   const { t } = useChromeT();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -30,11 +27,6 @@ export function FreezeModal({ projectId, onSuccess, onClose }: Props) {
     setError('');
     try {
       const result = await freezeVersion(projectId, label);
-      if (isTierBlock(result)) {
-        showPaywall(result.requiredTier);
-        onClose();
-        return;
-      }
       onSuccess(result.newVersionId, result.newVersionNumber);
     } catch (err) {
       setError(err instanceof Error ? err.message : t.freeze.failed);

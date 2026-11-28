@@ -2,7 +2,6 @@
 
 import Anthropic from '@anthropic-ai/sdk';
 import { requireSession } from '@/lib/auth';
-import { requireTierFeature } from '@/lib/tierGuard';
 import type { NodeData } from '@/types';
 
 const AI_MODEL = 'claude-sonnet-4-6';
@@ -23,7 +22,6 @@ function parseJsonFromText(text: string): unknown[] {
 
 export async function suggestCwe(nodeType: string, data: NodeData) {
   await requireSession();
-  await requireTierFeature('ai');
 
   const prompt = `You are a cybersecurity expert specializing in IEC 62443 and automotive security.
 A ${nodeType} component "${String(data.label)}" (type: ${String(data.componentType ?? 'unknown')}) is being analyzed in a TARA.
@@ -45,7 +43,6 @@ export async function analyzeThreats(
   components: { label: string; type: string; componentType?: string; assets?: { name: string; category: string }[]; existingThreats?: { name: string; stride: string }[] }[],
 ) {
   await requireSession();
-  await requireTierFeature('ai');
 
   const summary = components.map((c) => {
     const assets = c.assets?.map((a) => a.name).join(', ') || 'none';
@@ -69,7 +66,6 @@ Respond ONLY with a JSON array:
 
 export async function suggestIec62443(nodeType: string, data: NodeData) {
   await requireSession();
-  await requireTierFeature('ai');
 
   const prompt = `You are an IEC 62443 specialist. A ${nodeType} component "${String(data.label)}" with SL Target ${String(data.securityLevel ?? 'SL-2')} needs assessment.
 Which IEC 62443-4-2 CRs are the TOP 5 MOST CRITICAL to implement first for this component?

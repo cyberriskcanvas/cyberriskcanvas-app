@@ -50,7 +50,6 @@ export default async function DiagramEditorPage({ params }: Props) {
         id: session.user.id,
         name: session.user.name ?? '',
         color: session.user.color,
-        tier: session.user.tier,
         companyLogo: session.user.companyLogo ?? undefined,
         companyName: session.user.companyName ?? undefined,
       }}

@@ -93,9 +93,9 @@ const en = {
     checklist: (group: string) => `Open checklist ${group}`,
   },
   supportDays: (days: number) => (days >= 0 ? `${days} days until the end of support` : `Support ended ${-days} days ago`),
-  monitoringHint: 'Vulnerability monitoring runs inside the app every CVE_SCAN_INTERVAL_HOURS (default 24 h, needs the Pro licence). No recent scan was recorded: check the server log and that the setting is not 0.',
+  monitoringHint: 'Vulnerability monitoring runs inside the app every CVE_SCAN_INTERVAL_HOURS (default 24 h). No recent scan was recorded: check the server log and that the setting is not 0.',
   sdlNote: (done: number) => `BSI TR-03185 SDL checklist (organisation-wide): ${done} items done (Organisation).`,
-  proHint: 'CI evidence, SBOM and the release gate need a Pro licence.',
+  ciHint: 'No CI evidence has been recorded yet.',
   product: {
     title: 'Product data',
     craClass: 'CRA product class',
@@ -245,9 +245,9 @@ const de: typeof en = {
     checklist: (group) => `Checkliste ${group} öffnen`,
   },
   supportDays: (days) => (days >= 0 ? `Noch ${days} Tage bis Supportende` : `Support seit ${-days} Tagen beendet`),
-  monitoringHint: 'Die Schwachstellenüberwachung läuft in der App alle CVE_SCAN_INTERVAL_HOURS (Standard 24 h, Pro-Lizenz nötig). Es wurde kein aktueller Scan erfasst: Serverlog prüfen und ob die Einstellung nicht 0 ist.',
+  monitoringHint: 'Die Schwachstellenüberwachung läuft in der App alle CVE_SCAN_INTERVAL_HOURS (Standard 24 h). Es wurde kein aktueller Scan erfasst: Serverlog prüfen und ob die Einstellung nicht 0 ist.',
   sdlNote: (done) => `BSI-TR-03185-SDL-Checkliste (organisationsweit): ${done} Punkte erledigt (Organisation).`,
-  proHint: 'CI-Nachweise, SBOM und Release-Gate benötigen eine Pro-Lizenz.',
+  ciHint: 'Es wurden noch keine CI-Nachweise erfasst.',
   product: {
     title: 'Produktdaten',
     craClass: 'CRA-Produktklasse',

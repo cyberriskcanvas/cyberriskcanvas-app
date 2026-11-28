@@ -3,22 +3,21 @@
 import { requireSession } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { assertProjectAccess, assertProjectWriteAccess, isReviewerOrAdmin } from '@/lib/access';
-import { requireTierFeature } from '@/lib/tierGuard';
 import { audit } from '@/lib/audit';
 import { validatePolicy, type Policy, type Violation } from '@/lib/policy';
 import { loadViolations, toPolicy } from '@/lib/policyRun';
 
-/** Policies are set by admins and the review team; everybody with a Pro licence sees them. */
+/** Policies are set by admins and the review team. */
 async function requireManager() {
-  const { userId } = await requireTierFeature('sbom');
   const session = await requireSession();
+  const userId = session.user.id;
   if (!(await isReviewerOrAdmin(userId, session.user.role))) throw new Error('Only administrators and the review team can change policies.');
   return session;
 }
 
 export async function listPolicies(): Promise<{ policies: Policy[]; canEdit: boolean; projects: Array<{ id: string; name: string }> }> {
-  const { userId } = await requireTierFeature('sbom');
   const session = await requireSession();
+  const userId = session.user.id;
   const [rows, canEdit, projects] = await Promise.all([
     prisma.policy.findMany({ orderBy: { createdAt: 'asc' } }),
     isReviewerOrAdmin(userId, session.user.role),
@@ -46,7 +45,7 @@ export async function deletePolicy(id: string): Promise<void> {
 
 /** Violations of one version of a product (the active one by default). */
 export async function getViolations(projectId: string, versionNumber: number | null): Promise<Violation[]> {
-  const { userId } = await requireTierFeature('sbom');
+  const { user: { id: userId } } = await requireSession();
   await assertProjectAccess(projectId, userId);
   const version = await prisma.projectVersion.findFirst({
     where: { projectId, ...(versionNumber === null ? { status: 'active' } : { number: versionNumber }) },
@@ -57,7 +56,7 @@ export async function getViolations(projectId: string, versionNumber: number | n
 
 /** The product team accepts a violation for one component, with a reason. */
 export async function waiveViolation(policyId: string, projectId: string, componentKey: string, reason: string): Promise<void> {
-  const { userId } = await requireTierFeature('sbom');
+  const { user: { id: userId } } = await requireSession();
   await assertProjectWriteAccess(projectId, userId);
   const why = reason.trim().slice(0, 1000);
   if (!why) throw new Error('A reason is required.');

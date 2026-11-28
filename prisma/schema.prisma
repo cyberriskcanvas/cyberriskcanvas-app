@@ -68,7 +68,7 @@ model User {
   @@map("users")
 }
 
-// ─── License ──────────────────────────────────────────────────────────────────
+// Legacy product key rows retained for database compatibility.
 
 model License {
   id              String    @id @default(cuid())
@@ -289,7 +289,7 @@ model AuditLogEntry {
   createdAt  DateTime @default(now())
   actorId    String?  // null for system events (e.g. bootstrap)
   actorEmail String?
-  action     String   // e.g. "user.create", "license.save", "document.delete"
+  action     String   // e.g. "user.create", "document.delete"
   targetType String?  // e.g. "user", "project", "document"
   targetId   String?
   details    Json?    // small, non-sensitive context (names, counts - never secrets)
@@ -589,7 +589,7 @@ model CveScanRun {
 
 // Outgoing webhook for new-finding alerts from the periodic CVE re-scan
 // (Slack incoming webhooks, MS Teams connectors, or a generic JSON POST).
-// Instance-wide, like the Pro license itself - not scoped to a team.
+// Instance-wide, not scoped to a team.
 model AlertChannel {
   id          String   @id @default(cuid())
   url         String

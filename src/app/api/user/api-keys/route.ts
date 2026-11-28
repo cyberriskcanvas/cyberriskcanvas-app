@@ -1,7 +1,6 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/db';
-import { requireTierFeature, TierError } from '@/lib/tierGuard';
 import { generateApiKey } from '@/lib/apiAuth';
 import { audit } from '@/lib/audit';
 
@@ -34,15 +33,6 @@ export async function POST(req: NextRequest) {
   const session = await auth();
   if (!session?.user?.id) {
     return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
-  }
-
-  try {
-    await requireTierFeature('api');
-  } catch (err) {
-    if (err instanceof TierError) {
-      return NextResponse.json({ error: err.message }, { status: 403 });
-    }
-    throw err;
   }
 
   let body: { name?: string };

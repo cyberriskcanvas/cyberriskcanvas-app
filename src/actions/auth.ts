@@ -3,7 +3,6 @@
 import bcrypt from 'bcryptjs';
 import { requireSession, requireAdmin } from '@/lib/auth';
 import { prisma } from '@/lib/db';
-import { requireTierFeature } from '@/lib/tierGuard';
 import { audit } from '@/lib/audit';
 
 import { AVATAR_COLORS } from '@/lib/constants';
@@ -124,7 +123,6 @@ export async function updateUserProfile(data: {
 }) {
   const session = await requireSession();
   if (data.companyLogo) {
-    await requireTierFeature('whiteLabel');
     validateCompanyLogo(data.companyLogo);
   }
   return prisma.user.update({

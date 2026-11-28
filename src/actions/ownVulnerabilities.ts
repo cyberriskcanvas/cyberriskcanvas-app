@@ -3,8 +3,6 @@
 import { requireSession } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { assertProjectAccess, assertProjectWriteAccess } from '@/lib/access';
-import { checkTierFeature } from '@/lib/tierGuard';
-import { isTierBlock } from '@/lib/tierBlock';
 import { audit } from '@/lib/audit';
 import { validateOwnVulnerability, type OwnVulnStatus } from '@/lib/ownVulnerability';
 
@@ -35,11 +33,6 @@ const toDto = (r: Row): OwnVulnDto => ({
   acknowledgments: r.acknowledgments ?? '',
 });
 
-async function requirePro() {
-  const access = await checkTierFeature('sbom');
-  if (isTierBlock(access)) throw new Error('This feature requires a valid Pro license.');
-}
-
 export async function listOwnVulnerabilities(projectId: string): Promise<OwnVulnDto[]> {
   const session = await requireSession();
   await assertProjectAccess(projectId, session.user.id);
@@ -53,7 +46,6 @@ export type SaveResult = { ok: true; items: OwnVulnDto[] } | { ok: false; error:
 export async function saveOwnVulnerability(projectId: string, input: Record<string, unknown>, id?: string): Promise<SaveResult> {
   const session = await requireSession();
   await assertProjectWriteAccess(projectId, session.user.id);
-  await requirePro();
   const parsed = validateOwnVulnerability(input);
   if (!parsed.ok) return { ok: false, error: parsed.error };
   const v = parsed.value;

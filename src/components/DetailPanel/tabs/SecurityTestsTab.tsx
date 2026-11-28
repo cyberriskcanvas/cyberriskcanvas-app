@@ -11,8 +11,6 @@ import { effectiveTestStatus, type CiLatest } from '@/lib/ciTestStatus';
 import type { NodeData, Threat, IEC62443Mapping, SecurityTest, SecurityTestStatus } from '@/types';
 import { generateSecurityTests } from '@/data/securityTestMappings';
 import { cn } from '@/utils/cn';
-import { useTierGuard } from '@/hooks/useTierGuard';
-import { PaywallModal } from '@/components/Paywall/PaywallModal';
 
 const STATUS_CONFIG: Record<SecurityTestStatus, { label: string; color: string; icon: React.ElementType }> = {
   untested: { label: 'Not Tested', color: 'bg-[#f4f1ec] text-[#6b6460]', icon: Circle },
@@ -37,7 +35,6 @@ interface Props {
 
 export function SecurityTestsTab({ nodeId, data }: Props) {
   const { updateNodeData } = useDiagramStore();
-  const testGuard = useTierGuard('test.generate');
   const tests = (data.securityTests ?? []) as SecurityTest[];
   const threats = (data.threats ?? []) as Threat[];
   const iecMappings = (data.iec62443 ?? []) as IEC62443Mapping[];
@@ -144,16 +141,13 @@ export function SecurityTestsTab({ nodeId, data }: Props) {
       {/* Action bar */}
       <div className="flex flex-wrap gap-2">
         <button
-          onClick={() => testGuard.allowed ? handleGenerate() : testGuard.showPaywall()}
+          onClick={handleGenerate}
           disabled={threats.length === 0}
           title={threats.length === 0 ? 'Add threats first to auto-generate test cases' : undefined}
           className="flex items-center gap-1.5 rounded bg-[#1e293b] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[#374151] disabled:cursor-not-allowed disabled:opacity-40"
         >
           <Zap size={12} /> Auto-Generate
         </button>
-        {testGuard.paywallVisible && (
-          <PaywallModal currentTier={testGuard.tier} requiredTier={testGuard.requiredTier} onClose={testGuard.hidePaywall} />
-        )}
         <button onClick={() => setShowAddForm((v) => !v)} className={outlineBtn}>
           <Plus size={12} /> Add Manual
         </button>

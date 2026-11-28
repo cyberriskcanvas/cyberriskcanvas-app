@@ -6,7 +6,7 @@ import { getToken } from 'next-auth/jwt';
 import { registerCollaboration } from './src/websocket/collaboration';
 import { flushAllDirty } from './src/lib/redis';
 import { ensureAdminUser } from './src/lib/auth';
-import { startBackgroundJobs } from './src/pro/jobs';
+import { startBackgroundJobs } from './src/features/jobs';
 
 const dev = process.env.NODE_ENV !== 'production';
 const hostname = '0.0.0.0';

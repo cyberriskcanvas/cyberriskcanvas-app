@@ -1,8 +1,6 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { authenticateCiToken } from '@/lib/apiAuth';
 import { prisma } from '@/lib/db';
-import { getTier } from '@/lib/tierLimits';
-import { TIER_CONFIG } from '@/lib/tierConfig';
 import { deriveTasks } from '@/utils/deriveTasks';
 import type { DiagramNode } from '@/types';
 
@@ -14,9 +12,6 @@ import type { DiagramNode } from '@/types';
 export async function GET(req: NextRequest) {
   const ci = await authenticateCiToken(req);
   if (!ci) return NextResponse.json({ error: 'Invalid or missing CI token' }, { status: 401 });
-  if (!TIER_CONFIG[await getTier()].api) {
-    return NextResponse.json({ error: 'This feature requires a valid Pro license.' }, { status: 403 });
-  }
 
   const [project, diagrams] = await Promise.all([
     prisma.project.findUnique({ where: { id: ci.projectId }, select: { name: true } }),

@@ -39,7 +39,7 @@ src/components/   React, one folder per feature
 src/i18n/         UI text, English and German, one file per feature
 src/data/         static catalogues (CRA, IEC 62443, BSI, templates)
 src/utils/        pure helpers, PDF export (pdfmake, shared pieces in utils/pdf.ts)
-src/pro/          the only door from the free code into Pro code, see Editions
+src/features/     shared entry points for UI, server features and background jobs
 prisma/           schema and SQL migrations
 scripts/          runtime smoke test
 server.ts         custom server: Next, Socket.IO, background jobs, first-admin bootstrap
@@ -47,9 +47,8 @@ server.ts         custom server: Next, Socket.IO, background jobs, first-admin b
 
 ## Rules that matter
 
-- **Access and licence checks are explicit.** `src/lib/access.ts` (`assertProjectAccess`, `assertProjectWriteAccess`,
-  `canAccessProject`) for who may see or change a product; `src/lib/tierGuard.ts` (`requireTierFeature`) or
-  API routes must validate the session or scoped token.
+- **Access checks are explicit.** `src/lib/access.ts` (`assertProjectAccess`, `assertProjectWriteAccess`,
+  `canAccessProject`) for who may see or change a product. API routes must validate the session or scoped token.
 - **Validate input where it enters** (server action or route handler), with pure validators next to the logic
   (`validatePolicy`, `sanitizeRemediation`, …) so they can be unit-tested.
 - **Findings have one read path.** `src/lib/findings.ts` (`loadFindings`) joins components, advisory matches and the
@@ -70,7 +69,7 @@ server.ts         custom server: Next, Socket.IO, background jobs, first-admin b
 - **Comments** explain why, not what. A deliberate shortcut gets a `// ponytail:` comment that names the ceiling and the
   upgrade path.
 - **Commits:** Conventional Commits (`feat(scope): …`, types in CONTRIBUTING.md), one concern per commit.
-- Never commit `.env`, licence keys or anything from `keys/`.
+- Never commit `.env` or anything from `keys/`.
 
 ## Distribution
 

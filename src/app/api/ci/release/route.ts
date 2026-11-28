@@ -2,8 +2,6 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { authenticateCiToken } from '@/lib/apiAuth';
 import { prisma } from '@/lib/db';
 import { audit } from '@/lib/audit';
-import { getTier } from '@/lib/tierLimits';
-import { TIER_CONFIG } from '@/lib/tierConfig';
 import { computeGate, parseGateParams } from '@/lib/ciGateRun';
 import { freezeActiveVersion } from '@/lib/freeze';
 
@@ -15,10 +13,6 @@ import { freezeActiveVersion } from '@/lib/freeze';
 export async function POST(req: NextRequest) {
   const ci = await authenticateCiToken(req);
   if (!ci) return NextResponse.json({ error: 'Invalid or missing CI token' }, { status: 401 });
-  const tier = TIER_CONFIG[await getTier()];
-  if (!tier.api || !tier.baselines) {
-    return NextResponse.json({ error: 'This feature requires a valid Pro license.' }, { status: 403 });
-  }
 
   const q = new URL(req.url).searchParams;
   const label = (q.get('label') ?? '').trim().slice(0, 128);

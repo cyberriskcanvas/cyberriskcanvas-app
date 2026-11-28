@@ -107,9 +107,9 @@ We follow [Conventional Commits](https://www.conventionalcommits.org):
 
 ```
 feat(teams): add review team visibility for cross-project access
-fix(license): handle timeout when license API is unreachable
+fix(auth): handle invalid session tokens
 docs(readme): update quick start with docker-compose command
 refactor(access): consolidate project access checks into access.ts
 ```
 
-Scope is optional but helpful (e.g. `auth`, `teams`, `license`, `export`, `ai`, `sbom`).
+Scope is optional but helpful (e.g. `auth`, `teams`, `export`, `ai`, `sbom`).

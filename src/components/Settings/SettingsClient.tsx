@@ -37,7 +37,6 @@ interface Props {
     hasPassword: boolean;
     role: string;
     memberships: TeamMembership[];
-    isPro: boolean;
   };
   apiKeys: ApiKeyMeta[];
   initialSection?: string;
@@ -501,13 +500,6 @@ export default function SettingsClient({ user, apiKeys: initialApiKeys, initialS
                   {t.api.share}
                 </p>
 
-                {!user.isPro && (
-                  <div className="mb-6 flex items-center gap-2 rounded-lg border border-indigo-900/50 bg-indigo-900/20 px-4 py-3 text-sm text-indigo-300">
-                    <Shield size={14} className="shrink-0" />
-                    {t.api.pro}
-                  </div>
-                )}
-
                 {/* Newly created key - show once */}
                 {newlyCreatedKey && (
                   <div className="mb-6 rounded-lg border border-green-800 bg-green-900/20 p-4 space-y-3">
@@ -540,27 +532,25 @@ export default function SettingsClient({ user, apiKeys: initialApiKeys, initialS
                 )}
 
                 {/* Create form */}
-                {user.isPro && (
-                  <div className="mb-6 flex gap-2">
-                    <input
-                      type="text"
-                      placeholder={t.api.namePh}
-                      value={newKeyName}
-                      onChange={(e) => setNewKeyName(e.target.value)}
-                      onKeyDown={(e) => e.key === 'Enter' && handleCreateKey()}
-                      maxLength={100}
-                      className="flex-1 rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-white placeholder-gray-500 focus:border-indigo-500 focus:outline-none"
-                    />
-                    <button
-                      onClick={handleCreateKey}
-                      disabled={creatingKey || !newKeyName.trim()}
-                      className="flex items-center gap-1.5 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-50 transition-colors"
-                    >
-                      {creatingKey ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
-                      {t.api.create}
-                    </button>
-                  </div>
-                )}
+                <div className="mb-6 flex gap-2">
+                  <input
+                    type="text"
+                    placeholder={t.api.namePh}
+                    value={newKeyName}
+                    onChange={(e) => setNewKeyName(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleCreateKey()}
+                    maxLength={100}
+                    className="flex-1 rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-white placeholder-gray-500 focus:border-indigo-500 focus:outline-none"
+                  />
+                  <button
+                    onClick={handleCreateKey}
+                    disabled={creatingKey || !newKeyName.trim()}
+                    className="flex items-center gap-1.5 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-50 transition-colors"
+                  >
+                    {creatingKey ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
+                    {t.api.create}
+                  </button>
+                </div>
 
                 {keyMsg && <Alert type={keyMsg.type} message={keyMsg.text} />}
 

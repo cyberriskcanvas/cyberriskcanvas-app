@@ -11,7 +11,7 @@ import { useJourneyT, type JourneyT } from '@/i18n/journey';
 import { TaskList } from './TaskView';
 import { ProductInfoPanel } from './ProductInfoPanel';
 import { ReadinessPanel } from './ReadinessPanel';
-import { AssessmentPanel } from '@/pro/ui';
+import { AssessmentPanel } from '@/features/ui';
 import { DocumentsWizard, type DocsSection } from './DocumentsWizard';
 import { useAssessmentT } from '@/i18n/assessment';
 import { useReadinessT } from '@/i18n/readiness';
@@ -124,7 +124,7 @@ export function JourneyView({ projectId, diagramId, productName, onNavigate, onO
           {current.progress && <p className="text-xs text-[#6b6460]">{t.decided(current.progress.done, current.progress.total)}</p>}
           {current.id === 'secdev' && <p className="text-xs text-[#6b6460]">{t.sdlNote(data.sdl.done)}</p>}
           {(current.id === 'secdev' || current.id === 'sbom' || current.id === 'release') && ci === null && (
-            <p className="text-xs text-amber-700">{t.proHint}</p>
+            <p className="text-xs text-amber-700">{t.ciHint}</p>
           )}
           {current.id === 'postmarket' && (
             <div className="space-y-1 text-xs text-[#6b6460]">
